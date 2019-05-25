@@ -29,9 +29,9 @@ public class Image implements Serializable {
     private int tseqnum;
     private String tstand;
     private String fileLocation;
-    @Temporal(javax.persistence.TemporalType.DATE)
+    @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date obsDate;
-
+    private int raftMask;
 
     @Override
     public int hashCode() {
@@ -111,10 +111,16 @@ public class Image implements Serializable {
         return obsDate;
     }
 
+    public int getRaftMask() {
+        return raftMask;
+    }
+
     @Override
     public String toString() {
-        return "Image{" + "telCode=" + telCode + ", controller=" + controller + ", dayobs=" + dayobs + ", seqnum=" + seqnum + ", imgType=" + imgType + ", testType=" + testType + ", runNumber=" + runNumber + ", tseqnum=" + tseqnum + ", tstand=" + tstand + ", fileLocation=" + fileLocation + ", obsDate=" + obsDate + '}';
+        return "Image{" + "telCode=" + telCode + ", controller=" + controller + ", dayobs=" + dayobs + ", seqnum=" + seqnum + ", imgType=" + imgType + ", testType=" + testType + ", runNumber=" + runNumber + ", tseqnum=" + tseqnum + ", tstand=" + tstand + ", fileLocation=" + fileLocation + ", obsDate=" + obsDate + ", raftMask=" + raftMask + '}';
     }
-    
 
+    String asID() {
+        return String.format("%s_%s_%s_%06d",telCode,controller,dayobs,seqnum);
+    }
 }

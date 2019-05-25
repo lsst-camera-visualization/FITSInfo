@@ -27,7 +27,6 @@ public class ImageDAO {
             Root<Image> root = criteria.from(Image.class);
             criteria.select(root);
             if (orderBy != null) {
-                System.out.println("orderBy="+orderBy);
                 String[] token = orderBy.split(" ");
                 final Path<Object> orderByColumn = root.get(token[0]);
                 criteria.orderBy(token.length>1 && "desc".equals(token[1]) ? builder.desc(orderByColumn) : builder.asc(orderByColumn));
@@ -46,12 +45,11 @@ public class ImageDAO {
             if (take > 0) {
                 query.setMaxResults(take);
             }
-            return new TablePage<Image>(count, query.getResultList());
+            return new TablePage<>(count, query.getResultList());
         }
     }
 
-    public Image getImage(String id) {
-        ImageName in = new ImageName(id);
+    public Image getImage(ImageName in) {
         try (Session session = SessionUtil.getSession()) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
@@ -65,5 +63,57 @@ public class ImageDAO {
             criteria.select(root).where(predicates);
             return session.createQuery(criteria).getSingleResult();
         }
+    }
+    
+    public String getNextImage(ImageName in) {
+         try (Session session = SessionUtil.getSession()) {
+            CriteriaBuilder builder = session.getCriteriaBuilder();
+            CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
+            Root<Image> root = criteria.from(Image.class);
+            Predicate[] predicates = new Predicate[]{
+                builder.equal(root.get("controller"), in.getController().getCode()),
+                builder.equal(root.get("telCode"), in.getSource().getCode()),
+                builder.or(
+                        builder.greaterThan(root.get("dayobs"), in.getDateString()),
+                        builder.and(
+                           builder.greaterThan(root.get("seqnum"), in.getNumber()),
+                           builder.equal(root.get("dayobs"), in.getDateString())
+                        )
+                )
+            };
+            criteria.select(root).where(predicates);
+            criteria.orderBy(
+                        builder.asc(root.get("dayobs")),
+                        builder.asc(root.get("seqnum"))
+            );
+            Image image =  session.createQuery(criteria).setMaxResults(1).getSingleResult();
+            return image==null ? null : image.asID();
+        }       
+    }
+
+    public String getPreviousImage(ImageName in) {
+         try (Session session = SessionUtil.getSession()) {
+            CriteriaBuilder builder = session.getCriteriaBuilder();
+            CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
+            Root<Image> root = criteria.from(Image.class);
+            Predicate[] predicates = new Predicate[]{
+                builder.equal(root.get("controller"), in.getController().getCode()),
+                builder.equal(root.get("telCode"), in.getSource().getCode()),
+                builder.or(
+                        builder.lessThan(root.get("dayobs"), in.getDateString()),
+                        builder.and(
+                           builder.lessThan(root.get("seqnum"), in.getNumber()),
+                           builder.equal(root.get("dayobs"), in.getDateString())
+                        )
+                )
+            };
+            criteria.select(root).where(predicates);
+            criteria.orderBy(
+                        builder.desc(root.get("dayobs")),
+                        builder.desc(root.get("seqnum"))
+            );
+            Image image =  session.createQuery(criteria).setMaxResults(1).getSingleResult();
+            return image==null ? null : image.asID();
+        }       
     }
 }
