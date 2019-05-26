@@ -1,11 +1,14 @@
 package org.lsst.fits.dao;
 
+import java.util.List;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import org.hibernate.Session;
+import org.hibernate.criterion.ProjectionList;
+import org.hibernate.criterion.Projections;
 import org.hibernate.query.Query;
 import org.lsst.ccs.imagenaming.ImageName;
 
@@ -18,18 +21,18 @@ public class ImageDAO {
     public TablePage<Image> getImages(int skip, int take, String orderBy) {
         try (Session session = SessionUtil.getSession()) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
-           
+
             CriteriaQuery<Long> countQuery = builder.createQuery(Long.class);
             countQuery.select(builder.count(countQuery.from(Image.class)));
             Long count = session.createQuery(countQuery).getSingleResult();
-            
+
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
             Root<Image> root = criteria.from(Image.class);
             criteria.select(root);
             if (orderBy != null) {
                 String[] token = orderBy.split(" ");
                 final Path<Object> orderByColumn = root.get(token[0]);
-                criteria.orderBy(token.length>1 && "desc".equals(token[1]) ? builder.desc(orderByColumn) : builder.asc(orderByColumn));
+                criteria.orderBy(token.length > 1 && "desc".equals(token[1]) ? builder.desc(orderByColumn) : builder.asc(orderByColumn));
             } else {
                 criteria.orderBy(
                         builder.asc(root.get("telCode")),
@@ -64,9 +67,9 @@ public class ImageDAO {
             return session.createQuery(criteria).getSingleResult();
         }
     }
-    
+
     public String getNextImage(ImageName in) {
-         try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession()) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
             Root<Image> root = criteria.from(Image.class);
@@ -74,25 +77,25 @@ public class ImageDAO {
                 builder.equal(root.get("controller"), in.getController().getCode()),
                 builder.equal(root.get("telCode"), in.getSource().getCode()),
                 builder.or(
-                        builder.greaterThan(root.get("dayobs"), in.getDateString()),
-                        builder.and(
-                           builder.greaterThan(root.get("seqnum"), in.getNumber()),
-                           builder.equal(root.get("dayobs"), in.getDateString())
-                        )
+                builder.greaterThan(root.get("dayobs"), in.getDateString()),
+                builder.and(
+                builder.greaterThan(root.get("seqnum"), in.getNumber()),
+                builder.equal(root.get("dayobs"), in.getDateString())
+                )
                 )
             };
             criteria.select(root).where(predicates);
             criteria.orderBy(
-                        builder.asc(root.get("dayobs")),
-                        builder.asc(root.get("seqnum"))
+                    builder.asc(root.get("dayobs")),
+                    builder.asc(root.get("seqnum"))
             );
-            Image image =  session.createQuery(criteria).setMaxResults(1).getSingleResult();
-            return image==null ? null : image.asID();
-        }       
+            Image image = session.createQuery(criteria).setMaxResults(1).getSingleResult();
+            return image == null ? null : image.asID();
+        }
     }
 
     public String getPreviousImage(ImageName in) {
-         try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession()) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
             Root<Image> root = criteria.from(Image.class);
@@ -100,20 +103,60 @@ public class ImageDAO {
                 builder.equal(root.get("controller"), in.getController().getCode()),
                 builder.equal(root.get("telCode"), in.getSource().getCode()),
                 builder.or(
-                        builder.lessThan(root.get("dayobs"), in.getDateString()),
-                        builder.and(
-                           builder.lessThan(root.get("seqnum"), in.getNumber()),
-                           builder.equal(root.get("dayobs"), in.getDateString())
-                        )
+                builder.lessThan(root.get("dayobs"), in.getDateString()),
+                builder.and(
+                builder.lessThan(root.get("seqnum"), in.getNumber()),
+                builder.equal(root.get("dayobs"), in.getDateString())
+                )
                 )
             };
             criteria.select(root).where(predicates);
             criteria.orderBy(
-                        builder.desc(root.get("dayobs")),
-                        builder.desc(root.get("seqnum"))
+                    builder.desc(root.get("dayobs")),
+                    builder.desc(root.get("seqnum"))
             );
-            Image image =  session.createQuery(criteria).setMaxResults(1).getSingleResult();
-            return image==null ? null : image.asID();
-        }       
+            Image image = session.createQuery(criteria).setMaxResults(1).getSingleResult();
+            return image == null ? null : image.asID();
+        }
+    }
+
+    public int getTotalImageCount() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    public List<Object> getImageGroup(String groupSelector, boolean desc, int skip, int take) {
+        try (Session session = SessionUtil.getSession()) {
+            CriteriaBuilder builder = session.getCriteriaBuilder();
+            CriteriaQuery<Object> criteria = builder.createQuery();
+            Root<Image> root = criteria.from(Image.class);
+
+            criteria.groupBy(root.get(groupSelector));
+            criteria.multiselect(root.get(groupSelector), builder.count(root));
+            if (desc) {
+                criteria.orderBy(builder.desc(root.get(groupSelector)));
+            } else {
+                criteria.orderBy(builder.asc(root.get(groupSelector)));
+            }
+            Query<Object> query = session.createQuery(criteria);
+            if (skip > 0) {
+                query.setFirstResult(skip);
+            }
+            if (take > 0) {
+                query.setMaxResults(take);
+            }
+            return query.getResultList();
+        }
+    }
+
+    public Long getImageGroupCount(String groupSelector) {
+        try (Session session = SessionUtil.getSession()) {
+            CriteriaBuilder builder = session.getCriteriaBuilder();
+
+            CriteriaQuery<Long> countQuery = builder.createQuery(Long.class);
+            Root<Image> root = countQuery.from(Image.class);
+
+            countQuery.select(builder.countDistinct(root.get(groupSelector)));
+            return session.createQuery(countQuery).getSingleResult();
+        }
     }
 }

@@ -13,7 +13,11 @@ import org.glassfish.jersey.server.ResourceConfig;
 public final class MyConfiguration extends ResourceConfig {
 
     public MyConfiguration() {
+        register(JacksonJsonParamConverterProvider.class);
+//        register(ObjectMapperContextResolver.class);
+//        register(Group.class);
         register(FitsService.class);
+        register(FitsDataSource.class);
         register(JacksonFeature.class);
         register(CORSResponseFilter.class);
     }
