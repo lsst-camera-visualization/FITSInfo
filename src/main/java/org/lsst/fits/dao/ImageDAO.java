@@ -3,14 +3,13 @@ package org.lsst.fits.dao;
 import java.util.List;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import org.hibernate.Session;
-import org.hibernate.criterion.ProjectionList;
-import org.hibernate.criterion.Projections;
 import org.hibernate.query.Query;
 import org.lsst.ccs.imagenaming.ImageName;
+import org.lsst.fits.fitsinfo.Filter;
+import org.lsst.fits.fitsinfo.Sort;
 
 /**
  *
@@ -18,21 +17,15 @@ import org.lsst.ccs.imagenaming.ImageName;
  */
 public class ImageDAO {
 
-    public TablePage<Image> getImages(int skip, int take, String orderBy) {
+    public List<Image> getImages(int skip, int take, Filter filter, Sort sort) {
         try (Session session = SessionUtil.getSession()) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
-
-            CriteriaQuery<Long> countQuery = builder.createQuery(Long.class);
-            countQuery.select(builder.count(countQuery.from(Image.class)));
-            Long count = session.createQuery(countQuery).getSingleResult();
 
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
             Root<Image> root = criteria.from(Image.class);
             criteria.select(root);
-            if (orderBy != null) {
-                String[] token = orderBy.split(" ");
-                final Path<Object> orderByColumn = root.get(token[0]);
-                criteria.orderBy(token.length > 1 && "desc".equals(token[1]) ? builder.desc(orderByColumn) : builder.asc(orderByColumn));
+            if (sort != null) {
+                criteria.orderBy(sort.buildQuery(builder, root));
             } else {
                 criteria.orderBy(
                         builder.asc(root.get("telCode")),
@@ -41,6 +34,9 @@ public class ImageDAO {
                         builder.asc(root.get("seqnum"))
                 );
             }
+            if (filter != null) {
+                criteria.where(filter.buildQuery(builder, root));
+            }
             Query<Image> query = session.createQuery(criteria);
             if (skip > 0) {
                 query.setFirstResult(skip);
@@ -48,7 +44,7 @@ public class ImageDAO {
             if (take > 0) {
                 query.setMaxResults(take);
             }
-            return new TablePage<>(count, query.getResultList());
+            return query.getResultList();
         }
     }
 
@@ -120,11 +116,22 @@ public class ImageDAO {
         }
     }
 
-    public int getTotalImageCount() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public Long getTotalImageCount(Filter filter) {
+        try (Session session = SessionUtil.getSession()) {
+            CriteriaBuilder builder = session.getCriteriaBuilder();
+
+            CriteriaQuery<Long> countQuery = builder.createQuery(Long.class);
+            Root<Image> root = countQuery.from(Image.class);
+
+            if (filter != null) {
+                countQuery.where(filter.buildQuery(builder, root));
+            }
+            countQuery.select(builder.count(root));
+            return session.createQuery(countQuery).getSingleResult();
+        }
     }
 
-    public List<Object> getImageGroup(String groupSelector, boolean desc, int skip, int take) {
+    public List<Object> getImageGroup(String groupSelector, boolean desc, int skip, int take, Filter filter) {
         try (Session session = SessionUtil.getSession()) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
             CriteriaQuery<Object> criteria = builder.createQuery();
@@ -137,6 +144,9 @@ public class ImageDAO {
             } else {
                 criteria.orderBy(builder.asc(root.get(groupSelector)));
             }
+            if (filter != null) {
+                criteria.where(filter.buildQuery(builder, root));
+            }
             Query<Object> query = session.createQuery(criteria);
             if (skip > 0) {
                 query.setFirstResult(skip);
@@ -148,13 +158,15 @@ public class ImageDAO {
         }
     }
 
-    public Long getImageGroupCount(String groupSelector) {
+    public Long getImageGroupCount(String groupSelector, Filter filter) {
         try (Session session = SessionUtil.getSession()) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
 
             CriteriaQuery<Long> countQuery = builder.createQuery(Long.class);
             Root<Image> root = countQuery.from(Image.class);
-
+            if (filter != null) {
+                countQuery.where(filter.buildQuery(builder, root));
+            }
             countQuery.select(builder.countDistinct(root.get(groupSelector)));
             return session.createQuery(countQuery).getSingleResult();
         }

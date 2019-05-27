@@ -16,7 +16,7 @@ public final class MyConfiguration extends ResourceConfig {
         register(JacksonJsonParamConverterProvider.class);
 //        register(ObjectMapperContextResolver.class);
 //        register(Group.class);
-        register(FitsService.class);
+//        register(FitsService.class);
         register(FitsDataSource.class);
         register(JacksonFeature.class);
         register(CORSResponseFilter.class);

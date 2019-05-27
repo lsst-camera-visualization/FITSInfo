@@ -14,7 +14,6 @@ import javax.ws.rs.core.MediaType;
 import org.lsst.ccs.imagenaming.ImageName;
 import org.lsst.fits.dao.Image;
 import org.lsst.fits.dao.ImageDAO;
-import org.lsst.fits.dao.TablePage;
 
 /**
  *
@@ -33,60 +32,54 @@ public class FitsDataSource {
             @DefaultValue("0") @QueryParam(value = "take") int take,
             @DefaultValue("false") @QueryParam(value = "requireTotalCount") boolean requireTotalCount,
             @DefaultValue("false") @QueryParam(value = "requireGroupCount") boolean requireGroupCount,
-            @QueryParam(value = "group") List<Map> groups) {
+            @DefaultValue("[]") @QueryParam(value = "group") List<Map<String,Object>> groupList,
+            @DefaultValue("[]") @QueryParam(value= "sort") List<Map<String,Object>> sortList,
+            @DefaultValue("[]") @QueryParam(value= "filter") List<Object> filterList,
+            @DefaultValue("[]") @QueryParam(value= "groupSummary") List<Map<String, Object>> groupSummaryList) {
         Map<String, Object> result = new LinkedHashMap<>();
-        final TablePage<Image> images = dao.getImages(0, 0, null);
+        Group groups = Group.fromObjects(groupList);
         System.out.println("group="+groups);
-//        System.out.println("filter="+filter);
-//        System.out.println("sort="+sort);
+        Filter filter = Filter.fromObjects(filterList);
+        System.out.println("filter="+filter);
+        Sort sort = Sort.fromObjects(sortList);
+        System.out.println("sort="+sort);
+        GroupSummary groupSummary = GroupSummary.fromObjects(groupSummaryList);
+        System.out.println("groupSummary="+groupSummary);
         
-        if (!groups.isEmpty()) {
+        if (groups != null) {
             List groupData = new ArrayList();
-            for (Map group : groups) {
-                final String selector = (String) group.get("selector");
-                List<Object> resultSet = dao.getImageGroup(selector, (boolean) group.get("desc"), skip, take);
+            for (Group.GroupEntry group : groups.getEntries()) {
+                final String selector = group.getSelector();
+                List<Object> resultSet = dao.getImageGroup(selector, group.isDesc(), skip, take, filter);
                 for (Object rs : resultSet) {
                     Map<String, Object> groupResult = new LinkedHashMap<>();
                     Object[] rsa = (Object[]) rs;
                     groupResult.put("key", rsa[0]);
-                    if ((Boolean) group.get("isExpanded")) {
-                        groupResult.put("items", null);
+                    if (group.isExpanded()) {
+                        throw new UnsupportedOperationException("group isExpanded not implemented yet");
                     } else {
                         groupResult.put("items", null);
                         groupResult.put("count", rsa[1]);
                     }
                     groupData.add(groupResult);
+                    if (groupSummary != null) {
+                        groupResult.put("summary", new Long[]{(Long)rsa[1]});
+                    }
                 }
                 if (requireGroupCount) {
-                    result.put("groupCount", dao.getImageGroupCount(selector));
+                    result.put("groupCount", dao.getImageGroupCount(selector, filter));
                 }
             }
             result.put("data", groupData);
         } else {
-            result.put("data", images.getItems());
+            final List<Image> images = dao.getImages(skip, take, filter, sort);
+            result.put("data", images);
         }
         if (requireTotalCount) {
-            result.put("totalCount", images.getTotalCount());
+            result.put("totalCount", dao.getTotalImageCount(filter));
         }
 
         return result;
-    }
-
-    /**
-     *
-     * @param skip
-     * @param take
-     * @param orderBy
-     * @return
-     */
-    @GET
-    @Path("/imageTable")
-    public TablePage<Image> imageTable(
-            @DefaultValue("0") @QueryParam(value = "skip") int skip,
-            @DefaultValue("0") @QueryParam(value = "take") int take,
-            @QueryParam(value = "orderby") String orderBy) {
-
-        return dao.getImages(skip, take, orderBy);
     }
 
     @GET

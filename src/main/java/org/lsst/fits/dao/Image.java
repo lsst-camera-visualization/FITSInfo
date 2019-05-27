@@ -114,6 +114,10 @@ public class Image implements Serializable {
     public int getRaftMask() {
         return raftMask;
     }
+    
+    public String getID() {
+        return String.format("%s_%s_%s_%06d",telCode, controller, dayobs, seqnum);
+    }
 
     @Override
     public String toString() {
