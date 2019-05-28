@@ -19,7 +19,7 @@ import org.lsst.fits.dao.ImageDAO;
  *
  * @author tonyj
  */
-@Path("/dataSource")
+@Path("/")
 @Produces(MediaType.APPLICATION_JSON)
 public class FitsDataSource {
 
@@ -32,19 +32,11 @@ public class FitsDataSource {
             @DefaultValue("0") @QueryParam(value = "take") int take,
             @DefaultValue("false") @QueryParam(value = "requireTotalCount") boolean requireTotalCount,
             @DefaultValue("false") @QueryParam(value = "requireGroupCount") boolean requireGroupCount,
-            @DefaultValue("[]") @QueryParam(value = "group") List<Map<String,Object>> groupList,
-            @DefaultValue("[]") @QueryParam(value= "sort") List<Map<String,Object>> sortList,
-            @DefaultValue("[]") @QueryParam(value= "filter") List<Object> filterList,
-            @DefaultValue("[]") @QueryParam(value= "groupSummary") List<Map<String, Object>> groupSummaryList) {
+            @DefaultValue("[]") @QueryParam(value = "group") Group groups,
+            @DefaultValue("[]") @QueryParam(value= "sort") Sort sort,
+            @DefaultValue("[]") @QueryParam(value= "filter") Filter filter,
+            @DefaultValue("[]") @QueryParam(value= "groupSummary") GroupSummary groupSummary) {
         Map<String, Object> result = new LinkedHashMap<>();
-        Group groups = Group.fromObjects(groupList);
-        System.out.println("group="+groups);
-        Filter filter = Filter.fromObjects(filterList);
-        System.out.println("filter="+filter);
-        Sort sort = Sort.fromObjects(sortList);
-        System.out.println("sort="+sort);
-        GroupSummary groupSummary = GroupSummary.fromObjects(groupSummaryList);
-        System.out.println("groupSummary="+groupSummary);
         
         if (groups != null) {
             List groupData = new ArrayList();

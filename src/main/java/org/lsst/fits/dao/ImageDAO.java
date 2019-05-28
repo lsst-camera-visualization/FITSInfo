@@ -1,6 +1,7 @@
 package org.lsst.fits.dao;
 
 import java.util.List;
+import javax.persistence.NoResultException;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
@@ -85,8 +86,12 @@ public class ImageDAO {
                     builder.asc(root.get("dayobs")),
                     builder.asc(root.get("seqnum"))
             );
-            Image image = session.createQuery(criteria).setMaxResults(1).getSingleResult();
-            return image == null ? null : image.getObsId();
+            try {
+                Image image = session.createQuery(criteria).setMaxResults(1).getSingleResult();
+                return image.getObsId();
+            } catch (NoResultException x) {
+                return null;
+            }
         }
     }
 
@@ -111,8 +116,12 @@ public class ImageDAO {
                     builder.desc(root.get("dayobs")),
                     builder.desc(root.get("seqnum"))
             );
-            Image image = session.createQuery(criteria).setMaxResults(1).getSingleResult();
-            return image == null ? null : image.getObsId();
+            try {
+                Image image = session.createQuery(criteria).setMaxResults(1).getSingleResult();
+                return image.getObsId();
+            } catch (NoResultException x) {
+                return null;
+            }
         }
     }
 

@@ -1,5 +1,7 @@
 package org.lsst.fits.fitsinfo;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,12 @@ public class Sort {
             });
             return sort;
         }
+    }
+    
+    public static Sort fromString(String input) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        List<Map<String, Object>> readValue = mapper.readValue(input,List.class);        
+        return Sort.fromObjects(readValue);
     }
 
     @Override

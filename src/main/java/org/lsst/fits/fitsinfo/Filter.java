@@ -1,5 +1,7 @@
 package org.lsst.fits.fitsinfo;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -46,6 +48,12 @@ public abstract class Filter {
         }
     }
 
+    public static Filter fromString(String input) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        List<Object> readValue = mapper.readValue(input,List.class);        
+        return Filter.fromObjects(readValue);
+    }
+
     static class SimpleFilter extends Filter {
 
         private final String column;
@@ -67,14 +75,14 @@ public abstract class Filter {
         public <T> Expression<Boolean> buildQuery(CriteriaBuilder builder, Root<T> root) {
             switch (op) {
                 case EQUALS:
-                    if (value == null) { 
-                        return builder.isNull(root.get(column));  
+                    if (value == null) {
+                        return builder.isNull(root.get(column));
                     } else {
                         return builder.equal(root.get(column), value);
                     }
                 case NOTEQUALS:
-                    if (value == null) { 
-                        return builder.isNotNull(root.get(column));  
+                    if (value == null) {
+                        return builder.isNotNull(root.get(column));
                     } else {
                         return builder.notEqual(root.get(column), value);
                     }
@@ -83,7 +91,7 @@ public abstract class Filter {
                 case LT:
                     return builder.lessThan(root.get(column), (Comparable) value);
                 case CONTAINS:
-                    return builder.like(root.<String>get(column), "%"+value+"%");
+                    return builder.like(root.<String>get(column), "%" + value + "%");
                 default:
                     throw new IllegalArgumentException("Invalid binary operator: " + op);
             }
