@@ -6,6 +6,7 @@ import java.util.Objects;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Temporal;
+import org.hibernate.annotations.Formula;
 
 /**
  *
@@ -32,6 +33,9 @@ public class Image implements Serializable {
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date obsDate;
     private int raftMask;
+    
+    @Formula("concat(telcode,'_',controller,'_',dayobs,'_',lpad(seqnum,6,'0'))")
+    private String obsId;
 
     @Override
     public int hashCode() {
@@ -115,16 +119,12 @@ public class Image implements Serializable {
         return raftMask;
     }
     
-    public String getID() {
-        return String.format("%s_%s_%s_%06d",telCode, controller, dayobs, seqnum);
+    public String getObsId() {
+        return obsId;
     }
 
     @Override
     public String toString() {
         return "Image{" + "telCode=" + telCode + ", controller=" + controller + ", dayobs=" + dayobs + ", seqnum=" + seqnum + ", imgType=" + imgType + ", testType=" + testType + ", runNumber=" + runNumber + ", tseqnum=" + tseqnum + ", tstand=" + tstand + ", fileLocation=" + fileLocation + ", obsDate=" + obsDate + ", raftMask=" + raftMask + '}';
-    }
-
-    String asID() {
-        return String.format("%s_%s_%s_%06d",telCode,controller,dayobs,seqnum);
     }
 }

@@ -28,7 +28,7 @@ public class ImageDAO {
                 criteria.orderBy(sort.buildQuery(builder, root));
             } else {
                 criteria.orderBy(
-                        builder.asc(root.get("telCode")),
+                        builder.asc(root.get("obsId")),
                         builder.asc(root.get("controller")),
                         builder.asc(root.get("dayobs")),
                         builder.asc(root.get("seqnum"))
@@ -86,7 +86,7 @@ public class ImageDAO {
                     builder.asc(root.get("seqnum"))
             );
             Image image = session.createQuery(criteria).setMaxResults(1).getSingleResult();
-            return image == null ? null : image.asID();
+            return image == null ? null : image.getObsId();
         }
     }
 
@@ -112,7 +112,7 @@ public class ImageDAO {
                     builder.desc(root.get("seqnum"))
             );
             Image image = session.createQuery(criteria).setMaxResults(1).getSingleResult();
-            return image == null ? null : image.asID();
+            return image == null ? null : image.getObsId();
         }
     }
 

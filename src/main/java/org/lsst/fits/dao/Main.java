@@ -1,6 +1,7 @@
 package org.lsst.fits.dao;
 
 import java.util.List;
+import org.lsst.ccs.imagenaming.ImageName;
 
 /**
  *
@@ -19,5 +20,9 @@ public class Main {
         
         System.out.println(dao.getImageGroupCount("runNumber", null));
         System.out.println(dao.getTotalImageCount(null));
+        
+        Image image = dao.getImage(new ImageName("MC_C_20190319_000003"));
+        System.out.println(image);
+        System.out.println(image.getObsId());
     }
 }
