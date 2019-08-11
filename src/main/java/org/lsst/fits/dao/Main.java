@@ -21,8 +21,9 @@ public class Main {
         System.out.println(dao.getImageGroupCount("runNumber", null));
         System.out.println(dao.getTotalImageCount(null));
         
-        Image image = dao.getImage(new ImageName("MC_C_20190319_000003"));
+        Image image = dao.getImage(new ImageName("CC_C_20190527_000888"));
         System.out.println(image);
         System.out.println(image.getObsId());
+        System.out.println(image.getObsDate().getTime());
     }
 }

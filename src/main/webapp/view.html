@@ -1,0 +1,301 @@
+<html>
+    <head>
+        <title>LSST Camera Image Viewer</title>
+        <script src="openseadragon/openseadragon.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <style>
+            .toolbar
+            {
+                width:      100%;
+                border:     none;
+                color:      #333;
+                padding:    4px;
+                background-color: transparent;
+            }
+            .toolbar.fullpage{
+                width:      100%;
+                border:     none;
+                position:   fixed;
+                z-index:    999999;
+                left:       0;
+                top:        0;
+                background-color: #ccc;
+            }
+            .overlay-sensor {
+                font-size: 12pt;
+                color: red;
+                font-weight: bold;
+            }
+            .overlay-segment {
+                font-size: 12pt;
+                color: blue;
+                font-weight: bold;
+            }
+            .buttonGroup {
+                border: none; 
+                margin: 0px; 
+                padding: 0px; 
+                display: inline-block;
+                vertical-align: middle;
+            }
+            .osd-view {
+                background-color: blue; 
+            }
+            body {
+                height: 100%;
+                margin: 0;
+            }
+            .box {
+                display: flex;
+                flex-flow: column;
+                height: 100%;
+            }
+            .openseadragon-container {
+                display: flex;
+                flex-flow: column;                
+                flex: 1 1 auto;
+            }
+            .openseadragon-canvas {               
+                flex: 1 1 auto;
+            }
+            .box .content {
+                flex: 1 1 auto;
+            }
+            .field {
+                white-space: nowrap;
+            }
+            a.menu_icon i {
+                color: #000;
+                font-size: 40px;
+                padding-top: 5px;
+                transition: .2s ease;
+            }
+            a.menu_icon:hover i {
+                color: #aaa;
+            }
+            nav.menu {
+                width: 300px;
+                min-height: calc(100vh - 121px);
+                background-color: #03a9f4;
+                position: absolute;
+                left: -300px;
+                transition: .3s all;
+            }
+            nav.menu > a {
+                display: block;
+                padding: 5px;
+                margin: 15px 0 0px 20px;
+                color: #494949;
+            }
+            .menu_show {
+                left: 0!important;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="box">
+            <h1>LSST Camera Image Viewer</h1>
+            <div id="viewer-area" class="box content">
+                <div id="toolbarDiv" class="toolbar">
+                    <a href="#" class="menu_icon" id="menu_icon"><i class="material-icons">dehaze</i></a>
+                    <div id="buttons" class="buttonGroup"></div>
+                    <span class="field">Image: <input type="text" id="imageName" size="18"></span>
+                    <div id="nextPrev" class="buttonGroup"></div>
+                    <span class="field">Raft: <select id="raft"></select></span>
+                    <span class="field">Test Type: <input type="text" id="testType" size="8" readonly="readonly"></span>
+                    <span class="field">Image Type: <input type="text" id="imageType" size="8" readonly="readonly"></span>
+                    <span class="field">Run: <input type="text" id="run" size="5" readonly="readonly"></span>
+                    <span class="field">Time: <input type="text" id="time" size="15" readonly="readonly"></span>
+                </div>
+                <menu type="popup">
+                  <menuitem type="radio" radiogroup="alignment" checked
+                    label="Left" onclick="setAlign('left')">
+                </menu>                
+                <div id="osd-view" class="openseadragon content box">
+                    <script type="text/javascript">
+                        'use strict';
+                        $(document).ready(function () {
+                            $(".menu_icon").on('click', function () {
+                                $(".menu").toggleClass("menu_show");
+                            });
+                        });
+                        const iif2 = "https://lsst-camera.slac.stanford.edu/iiif/2/";
+                        const restURL = "rest/imageInfo/";
+                        let urlParams = new URLSearchParams(window.location.search);
+                        let imageName = urlParams.get('image');
+                        let raftName = urlParams.get('raft');
+                        let identifier = `${imageName}_${raftName}`;
+                        let imageInfo = null;
+                        let showOverlay = false;
+                        function showHideOverlays(show) {
+                            if (show) {
+                                for (let x = 0; x < 3; x++) {
+                                    for (let y = 0; y < 3; y++) {
+                                        let elt = document.createElement("div");
+                                        elt.className = "overlay-sensor";
+                                        elt.innerHTML = `S${2 - y}${x}`;
+                                        osd.addOverlay({element: elt, location: new OpenSeadragon.Point(.167 + x * .333, 0.35 + (y - 1) * .333), placement: OpenSeadragon.Placement.TOP});
+                                        for (let i = 0; i < 8; i++) {
+                                            let elt = document.createElement("div");
+                                            elt.className = "overlay-segment";
+                                            elt.innerHTML = `Sg${(i + 10).toLocaleString("en-us", {minimumIntegerDigits: 2})}`;
+                                            osd.addOverlay({element: elt, location: new OpenSeadragon.Point(.028 + i * .04 + x * .333, 0.4980 + (y - 1) * .333), placement: OpenSeadragon.Placement.BOTTOM});
+                                        }
+                                        for (let i = 0; i < 8; i++) {
+                                            let elt = document.createElement("div");
+                                            elt.className = "overlay-segment";
+                                            elt.innerHTML = `Sg${i.toLocaleString("en-us", {minimumIntegerDigits: 2})}`;
+                                            osd.addOverlay({element: elt, location: new OpenSeadragon.Point(.028 + i * .04 + x * .333, 0.5020 + (y - 1) * .333), placement: OpenSeadragon.Placement.TOP});
+                                        }
+                                    }
+                                }
+                            } else {
+                                osd.clearOverlays();
+                            }
+                        }
+
+                        let homeButton = new OpenSeadragon.Button({
+                            srcRest: "openseadragon/images/home_rest.png",
+                            srcDown: "openseadragon/images/home_pressed.png",
+                            srcHover: "openseadragon/images/home_hover.png",
+                            srcGroup: "openseadragon/images/home_grouphover.png"
+                        });
+
+
+                        let zoomOutButton = new OpenSeadragon.Button({
+                            srcRest: "openseadragon/images/zoomout_rest.png",
+                            srcDown: "openseadragon/images/zoomout_pressed.png",
+                            srcHover: "openseadragon/images/zoomout_hover.png",
+                            srcGroup: "openseadragon/images/zoomout_grouphover.png"
+                        });
+
+
+                        let zoomInButton = new OpenSeadragon.Button({
+                            srcRest: "openseadragon/images/zoomin_rest.png",
+                            srcDown: "openseadragon/images/zoomin_pressed.png",
+                            srcHover: "openseadragon/images/zoomin_hover.png",
+                            srcGroup: "openseadragon/images/zoomin_grouphover.png"
+                        });
+
+
+                        let fullPageButton = new OpenSeadragon.Button({
+                            srcRest: "openseadragon/images/fullpage_rest.png",
+                            srcDown: "openseadragon/images/fullpage_pressed.png",
+                            srcHover: "openseadragon/images/fullpage_hover.png",
+                            srcGroup: "openseadragon/images/fullpage_grouphover.png"
+                        });
+
+
+                        let prevButton = new OpenSeadragon.Button({
+                            tooltip: "Previous",
+                            srcRest: "openseadragon/images/previous_rest.png",
+                            srcDown: "openseadragon/images/previous_pressed.png",
+                            srcHover: "openseadragon/images/previous_hover.png",
+                            srcGroup: "openseadragon/images/previous_grouphover.png",
+                            onClick: function (e) {
+                                imageName = imageInfo.previous;
+                                let identifier = `${imageName}_${raftName}`;
+                                osd.open([`${iif2}${identifier}/info.json`]);
+                            }
+                        });
+
+                        let nextButton = new OpenSeadragon.Button({
+                            tooltip: "Next",
+                            srcRest: "openseadragon/images/next_rest.png",
+                            srcDown: "openseadragon/images/next_pressed.png",
+                            srcHover: "openseadragon/images/next_hover.png",
+                            srcGroup: "openseadragon/images/next_grouphover.png",
+                            onClick: function (e) {
+                                imageName = imageInfo.next;
+                                let identifier = `${imageName}_${raftName}`;
+                                osd.open([`${iif2}${identifier}/info.json`]);
+                            }
+                        });
+
+                        let overlayButton = new OpenSeadragon.Button({
+                            tooltip: "Toggle Overlays",
+                            srcRest: "openseadragon/images/button_rest.png",
+                            srcDown: "openseadragon/images/button_pressed.png",
+                            srcHover: "openseadragon/images/button_hover.png",
+                            srcGroup: "openseadragon/images/button_grouphover.png",
+                            onClick: function (e) {
+                                showOverlay = !showOverlay;
+                                showHideOverlays(showOverlay);
+                            }
+                        });
+                        $('#imageName').on("keypress", function (e) {
+                            if (e.keyCode === 13) {
+                                imageName = $("#imageName").val();
+                                let identifier = `${imageName}_${raftName}`;
+                                osd.open([`${iif2}${identifier}/info.json`]);
+                            }
+                        });
+                        $('#raft').on("change", function (e) {
+                            raftName = $("#raft").val();
+                            let identifier = `${imageName}_${raftName}`;
+                            osd.open([`${iif2}${identifier}/info.json`]);
+                        });
+                        new OpenSeadragon.ButtonGroup({buttons: [zoomInButton, zoomOutButton, homeButton, fullPageButton, overlayButton], element: $("#buttons")[0]});
+                        new OpenSeadragon.ButtonGroup({buttons: [prevButton, nextButton], element: $("#nextPrev")[0]});
+
+                        let osd = OpenSeadragon({
+                            id: "osd-view",
+                            prefixUrl: "openseadragon/images/",
+                            sequenceMode: false,
+                            showNavigator: true,
+                            tileSources: [
+                                `${iif2}${identifier}/info.json`
+                            ],
+                            toolbar: "toolbarDiv",
+                            homeButton: homeButton.element,
+                            fullPageButton: fullPageButton.element,
+                            zoomInButton: zoomInButton.element,
+                            zoomOutButton: zoomOutButton.element,
+                            preserveOverlays: true,
+                            preserveViewport: true
+                        });
+                        // Get rid of mystery div created by the code above, else toolbar messed up.
+                        $('#toolbarDiv').children().last().remove();
+
+                        osd.addHandler('open', () => {
+                            $('#imageName').val(imageName);
+                            $('#raft').val(raftName);
+                            nextButton.disable();
+                            prevButton.disable();
+                            fetch(`${restURL}${imageName}`)
+                                    .then(function (response) {
+                                        return response.json();
+                                    })
+                                    .then(function (myJson) {
+                                        imageInfo = myJson;
+                                        let image = myJson.image;
+                                        $("#run").val(image.runNumber);
+                                        $("#imageType").val(image.imgType);
+                                        $("#testType").val(image.testType);
+                                        $("#time").val(new Date(image.obsDate).toISOString().slice(0, 19));
+                                        $("#raft").empty();
+                                        if (imageInfo.previous)
+                                            prevButton.enable();
+                                        if (imageInfo.next)
+                                            nextButton.enable();
+                                        prevButton.enable();
+                                        for (let i = 0; i < 25; i++) {
+                                            let raft = image.raftMask >> i & 1;
+                                            if (raft) {
+                                                let newRaft = "R" + Math.floor(i / 5) + (i % 5);
+                                                let selected = raftName === newRaft ? "selected" : "";
+                                                $("#raft").append(`<option ${selected}>${newRaft}</option>`);
+                                            }
+                                        }
+                                    });
+                        });
+                    </script>
+                    <noscript>
+                    <p>OpenSeadragon is not available unless JavaScript is enabled.</p>
+                    </noscript>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
