@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.Objects;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Table;
 import javax.persistence.Temporal;
 import org.hibernate.annotations.Formula;
 
@@ -13,6 +14,7 @@ import org.hibernate.annotations.Formula;
  * @author tonyj
  */
 @Entity
+@Table(name="ccs_image")
 public class Image implements Serializable {
     
     @Id
