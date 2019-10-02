@@ -98,7 +98,7 @@
             <h1>LSST Camera Image Viewer</h1>
             <div id="viewer-area" class="box content">
                 <div id="toolbarDiv" class="toolbar">
-                    <a href="#" class="menu_icon" id="menu_icon"><i class="material-icons">dehaze</i></a>
+                    <!-- <a href="#" class="menu_icon" id="menu_icon"><i class="material-icons">dehaze</i></a> -->
                     <div id="buttons" class="buttonGroup"></div>
                     <span class="field">Image: <input type="text" id="imageName" size="18"></span>
                     <div id="nextPrev" class="buttonGroup"></div>
@@ -125,6 +125,7 @@
                         let urlParams = new URLSearchParams(window.location.search);
                         let imageName = urlParams.get('image');
                         let raftName = urlParams.get('raft');
+                        if (!raftName) raftName = "all";
                         let identifier = `${imageName}_${raftName}`;
                         let imageInfo = null;
                         let showOverlay = false;
@@ -280,13 +281,19 @@
                                         if (imageInfo.next)
                                             nextButton.enable();
                                         prevButton.enable();
+                                        let n = 0;
                                         for (let i = 0; i < 25; i++) {
                                             let raft = image.raftMask >> i & 1;
                                             if (raft) {
                                                 let newRaft = "R" + Math.floor(i / 5) + (i % 5);
                                                 let selected = raftName === newRaft ? "selected" : "";
                                                 $("#raft").append(`<option ${selected}>${newRaft}</option>`);
+                                                n++;
                                             }
+                                        }
+                                        if (n > 2) {
+                                            let selected = raftName === 'all' ? "selected" : "";
+                                            $("#raft").prepend(`<option ${selected}>all</option>`);
                                         }
                                     });
                         });
