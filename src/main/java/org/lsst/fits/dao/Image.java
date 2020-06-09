@@ -29,7 +29,7 @@ public class Image implements Serializable {
     private String imgType;
     private String testType;
     private String runNumber;
-    private int tseqnum;
+    private Integer tseqnum;
     private String tstand;
     private String fileLocation;
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
@@ -102,7 +102,7 @@ public class Image implements Serializable {
     }
 
     public int getTseqnum() {
-        return tseqnum;
+        return tseqnum == null ? 0 : tseqnum;
     }
 
     public String getTstand() {
