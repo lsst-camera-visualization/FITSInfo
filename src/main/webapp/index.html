@@ -60,8 +60,8 @@
                             location: "before",
                             widget: "dxSelectBox",
                             options: {
-                                dataSource: ["Main Camera", "ComCam"],
-                                value: "Main Camera",
+                                dataSource: ["ComCam"],
+                                value: "ComCam",
                                 onValueChanged: function (data) {
                                     if (data.value === "ComCam") {
                                         dataGrid.filter(["telCode", "=", "CC"]);
@@ -133,7 +133,7 @@
                                     }
                                 }
                                 if (n > 2) {
-                                   element.prepend(`<a href="view.html?image=${cellInfo.data.obsId}&raft=all" target="imageViewer">All</a> `);                                        
+                                    element.prepend(`<a href="view.html?image=${cellInfo.data.obsId}&raft=all" target="imageViewer">All</a> `);
                                 }
                             }
                         },
@@ -178,7 +178,11 @@
                             }]
                     }
                 }).dxDataGrid("instance");
-                dataGrid.filter(["telCode", "=", "MC"]);
+                dataGrid.filter(["telCode", "=", "CC"]);
+                dataGrid.columnOption("dayobs", "visible", true);
+                dataGrid.columnOption("dayobs", "groupIndex", 0);
+                dataGrid.columnOption("runNumber", "groupIndex", undefined);
+                dataGrid.columnOption("runNumber", "visible", false);
             });
         </script>
     </body>
