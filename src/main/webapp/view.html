@@ -107,6 +107,7 @@
                     <span class="field">Image Type: <input type="text" id="imageType" size="8" readonly="readonly"></span>
                     <span class="field">Run: <input type="text" id="run" size="5" readonly="readonly"></span>
                     <span class="field">Time: <input type="text" id="time" size="15" readonly="readonly"></span>
+                    <label for="showLatest">Show Latest: <input type="checkbox" id="showLatest"></label>
                 </div>
                 <menu type="popup">
                   <menuitem type="radio" radiogroup="alignment" checked
@@ -236,6 +237,16 @@
                             raftName = $("#raft").val();
                             let identifier = `${imageName}_${raftName}`;
                             osd.open([`${iif2}${identifier}/info.json`]);
+                        });
+                        $('#showLatest').on("change", function(e) {
+                            const checked = $('#showLatest').is(":checked");
+                            console.log(checked); 
+                            if (checked) {
+                                const evtSource = new EventSource("rest/notify");
+                                evtSource.addEventListener("newImage", function(event) {
+                                    console.log(event);
+                                });
+                            } 
                         });
                         new OpenSeadragon.ButtonGroup({buttons: [zoomInButton, zoomOutButton, homeButton, fullPageButton, overlayButton], element: $("#buttons")[0]});
                         new OpenSeadragon.ButtonGroup({buttons: [prevButton, nextButton], element: $("#nextPrev")[0]});
