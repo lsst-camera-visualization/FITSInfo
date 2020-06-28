@@ -242,7 +242,7 @@
                                 eventSource = new EventSource("rest/notify");
                                 eventSource.addEventListener("newImage", function(event) {
                                     console.log(event);
-                                    let imageName = event.lastEventId;
+                                    imageName = event.lastEventId;
                                     let identifier = `${imageName}_${raftName}`;
                                     osd.open([`${iif2}${identifier}/info.json`]);
                                 });
