@@ -107,11 +107,8 @@
                     <span class="field">Image Type: <input type="text" id="imageType" size="8" readonly="readonly"></span>
                     <span class="field">Run: <input type="text" id="run" size="5" readonly="readonly"></span>
                     <span class="field">Time: <input type="text" id="time" size="15" readonly="readonly"></span>
-                </div>
-                <menu type="popup">
-                  <menuitem type="radio" radiogroup="alignment" checked
-                    label="Left" onclick="setAlign('left')">
-                </menu>                
+                    <label for="showLatest">Show Latest: <input type="checkbox" id="showLatest"></label>
+                </div>            
                 <div id="osd-view" class="openseadragon content box">
                     <script type="text/javascript">
                         'use strict';
@@ -129,6 +126,7 @@
                         let identifier = `${imageName}_${raftName}`;
                         let imageInfo = null;
                         let showOverlay = false;
+                        let eventSource = null;
                         function showHideOverlays(show) {
                             if (show) {
                                 for (let x = 0; x < 3; x++) {
@@ -236,6 +234,21 @@
                             raftName = $("#raft").val();
                             let identifier = `${imageName}_${raftName}`;
                             osd.open([`${iif2}${identifier}/info.json`]);
+                        });
+                        $('#showLatest').on("change", function(e) {
+                            const checked = $('#showLatest').is(":checked");
+                            console.log(checked); 
+                            if (checked) {
+                                eventSource = new EventSource("rest/notify");
+                                eventSource.addEventListener("newImage", function(event) {
+                                    console.log(event);
+                                    let imageName = event.lastEventId;
+                                    let identifier = `${imageName}_${raftName}`;
+                                    osd.open([`${iif2}${identifier}/info.json`]);
+                                });
+                            } else {
+                                eventSource.close();
+                            }
                         });
                         new OpenSeadragon.ButtonGroup({buttons: [zoomInButton, zoomOutButton, homeButton, fullPageButton, overlayButton], element: $("#buttons")[0]});
                         new OpenSeadragon.ButtonGroup({buttons: [prevButton, nextButton], element: $("#nextPrev")[0]});
