@@ -16,5 +16,7 @@ public final class MyConfiguration extends ResourceConfig {
         register(FitsDataSource.class);
         register(JacksonFeature.class);
         register(CORSResponseFilter.class);
+        register(WebHook.class);
+        register(EventSender.class);
     }
 }
