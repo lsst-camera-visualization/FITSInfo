@@ -99,7 +99,7 @@
                     <failOnMissingWebXml>false</failOnMissingWebXml>
                 </configuration>
             </plugin>
-        </plugins>
+        </plugins>    
     </build>
     
     <properties>

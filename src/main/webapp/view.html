@@ -240,6 +240,7 @@
                             console.log(checked); 
                             if (checked) {
                                 eventSource = new EventSource("rest/notify");
+                                
                                 eventSource.addEventListener("newImage", function(event) {
                                     console.log(event);
                                     imageName = event.lastEventId;
