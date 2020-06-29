@@ -83,9 +83,17 @@ public class FitsDataSource {
     @GET
     @Path("/imageInfo/{id}")
     public Map<String, Object> imageInfo(@PathParam(value = "id") String id) {
-        ImageName in = new ImageName(id);
+        Image image;
+        ImageName in;
+        if ("latest".equalsIgnoreCase(id)) {
+            image = dao.getLatestImage();
+            in = new ImageName(image.getObsId());
+        } else {
+            in = new ImageName(id);
+            image = dao.getImage(in);
+        }
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("image", dao.getImage(in));
+        result.put("image", image);
         result.put("next", dao.getNextImage(in));
         result.put("previous", dao.getPreviousImage(in));
         return result;
