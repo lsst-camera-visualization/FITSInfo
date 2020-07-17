@@ -13,6 +13,7 @@ import org.hibernate.annotations.Formula;
  *
  * @author tonyj
  */
+@SuppressWarnings({"null", "PersistenceUnitPresent"})
 @Entity
 @Table(name="ccs_image")
 public class Image implements Serializable {
@@ -35,6 +36,8 @@ public class Image implements Serializable {
     @Temporal(javax.persistence.TemporalType.TIMESTAMP)
     private Date obsDate;
     private int raftMask;
+    private Float exposureTime;
+    private Float darkTime;
     
     @Formula("concat(telcode,'_',controller,'_',dayobs,'_',lpad(seqnum,6,'0'))")
     private String obsId;
@@ -124,9 +127,17 @@ public class Image implements Serializable {
     public String getObsId() {
         return obsId;
     }
-    
+
+    public float getExposureTime() {
+        return exposureTime == null ? 0 : exposureTime;
+    }
+
+    public float getDarkTime() {
+        return darkTime == null ? 0 : darkTime;
+    }
+
     @Override
     public String toString() {
-        return "Image{" + "telCode=" + telCode + ", controller=" + controller + ", dayobs=" + dayobs + ", seqnum=" + seqnum + ", imgType=" + imgType + ", testType=" + testType + ", runNumber=" + runNumber + ", tseqnum=" + tseqnum + ", tstand=" + tstand + ", fileLocation=" + fileLocation + ", obsDate=" + obsDate + ", raftMask=" + raftMask + '}';
+        return "Image{" + "telCode=" + telCode + ", controller=" + controller + ", dayobs=" + dayobs + ", seqnum=" + seqnum + ", imgType=" + imgType + ", testType=" + testType + ", runNumber=" + runNumber + ", tseqnum=" + tseqnum + ", tstand=" + tstand + ", fileLocation=" + fileLocation + ", obsDate=" + obsDate + ", raftMask=" + raftMask + ", exposureTime=" + exposureTime + ", darkTime=" + darkTime + ", obsId=" + obsId + '}';
     }
 }
