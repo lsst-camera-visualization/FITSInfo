@@ -112,17 +112,26 @@
                 <div id="osd-view" class="openseadragon content box">
                     <script type="text/javascript">
                         'use strict';
-                        $(document).ready(function () {
-                            $(".menu_icon").on('click', function () {
-                                $(".menu").toggleClass("menu_show");
-                            });
-                        });
                         const iif2 = "http://comcam-fp01.ls.lsst.org:8182/iiif/2/";
                         const restURL = "rest/imageInfo/";
                         let urlParams = new URLSearchParams(window.location.search);
                         let imageName = urlParams.get('image');
                         let raftName = urlParams.get('raft');
-                        if (!raftName) raftName = "all";
+                        if (!raftName) raftName = "R22";
+                        let imageName = urlParams.get('image');
+                        if (imageName === "latest") {
+                                fetch(`${restURL}latest`)
+                                    .then(function (response) {
+                                        return response.json();
+                                    })
+                                    .then(function (myJson) {
+                                        imageName = myJson.image.obsId;
+                                        let identifier = `${imageName}_${raftName}`;
+                                        osd.open([`${iif2}${identifier}/info.json`]);
+                                        $('#showLatest').prop('checked', true);
+                                        $("#showLatest").trigger("change")
+                                    });
+                        }
                         let identifier = `${imageName}_${raftName}`;
                         let imageInfo = null;
                         let showOverlay = false;
