@@ -105,9 +105,11 @@
                     <span class="field">Raft: <select id="raft"></select></span>
                     <span class="field">Test Type: <input type="text" id="testType" size="8" readonly="readonly"></span>
                     <span class="field">Image Type: <input type="text" id="imageType" size="8" readonly="readonly"></span>
+                    <span class="field">Exposure Time: <input type="text" id="exposureTime" size="8" readonly="readonly"></span>
+                    <span class="field">Dark Time: <input type="text" id="darkTime" size="8" readonly="readonly"></span>                    
                     <span class="field">Run: <input type="text" id="run" size="5" readonly="readonly"></span>
                     <span class="field">Time: <input type="text" id="time" size="15" readonly="readonly"></span>
-                    <label for="showLatest">Show Latest: <input type="checkbox" id="showLatest"></label>
+                    <label for="showLatest">Show New: <input type="checkbox" id="showLatest"></label>
                 </div>            
                 <div id="osd-view" class="openseadragon content box">
                     <script type="text/javascript">
@@ -297,6 +299,8 @@
                                         $("#run").val(image.runNumber);
                                         $("#imageType").val(image.imgType);
                                         $("#testType").val(image.testType);
+                                        $("#exposureTime").val(image.exposureTime);
+                                        $("#darkTime").val(image.darkTime);
                                         $("#time").val(new Date(image.obsDate).toISOString().slice(0, 19));
                                         $("#raft").empty();
                                         if (imageInfo.previous)
