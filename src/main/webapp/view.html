@@ -107,7 +107,6 @@
                     <span class="field">Image Type: <input type="text" id="imageType" size="8" readonly="readonly"></span>
                     <span class="field">Exposure Time: <input type="text" id="exposureTime" size="8" readonly="readonly"></span>
                     <span class="field">Dark Time: <input type="text" id="darkTime" size="8" readonly="readonly"></span>                    
-                    <span class="field">Run: <input type="text" id="run" size="5" readonly="readonly"></span>
                     <span class="field">Time: <input type="text" id="time" size="15" readonly="readonly"></span>
                     <label for="showLatest">Show New: <input type="checkbox" id="showLatest"></label>
                 </div>            
@@ -120,7 +119,6 @@
                         let imageName = urlParams.get('image');
                         let raftName = urlParams.get('raft');
                         if (!raftName) raftName = "R22";
-                        let imageName = urlParams.get('image');
                         if (imageName === "latest") {
                                 fetch(`${restURL}latest`)
                                     .then(function (response) {
@@ -296,7 +294,6 @@
                                     .then(function (myJson) {
                                         imageInfo = myJson;
                                         let image = myJson.image;
-                                        $("#run").val(image.runNumber);
                                         $("#imageType").val(image.imgType);
                                         $("#testType").val(image.testType);
                                         $("#exposureTime").val(image.exposureTime);

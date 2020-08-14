@@ -121,7 +121,7 @@ public class Image implements Serializable {
     }
 
     public int getRaftMask() {
-        return raftMask;
+        return raftMask == 0 ? 4096 :raftMask;
     }
     
     public String getObsId() {
