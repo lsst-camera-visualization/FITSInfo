@@ -23,11 +23,10 @@ import org.lsst.fits.dao.ImageDAO;
 @Produces(MediaType.APPLICATION_JSON)
 public class FitsDataSource {
 
-    private final ImageDAO dao = new ImageDAO();
-
     @GET
-    @Path("/images")
+    @Path("/{site}/images")
     public Object images(
+            @PathParam(value = "site") String siteName,
             @DefaultValue("0") @QueryParam(value = "skip") int skip,
             @DefaultValue("0") @QueryParam(value = "take") int take,
             @DefaultValue("false") @QueryParam(value = "requireTotalCount") boolean requireTotalCount,
@@ -38,6 +37,7 @@ public class FitsDataSource {
             @DefaultValue("[]") @QueryParam(value= "groupSummary") GroupSummary groupSummary) {
         Map<String, Object> result = new LinkedHashMap<>();
         
+        ImageDAO dao = new ImageDAO(siteName);
         if (groups != null) {
             List groupData = new ArrayList();
             for (Group.GroupEntry group : groups.getEntries()) {
@@ -75,14 +75,16 @@ public class FitsDataSource {
     }
 
     @GET
-    @Path("/image/{id}")
-    public Image image(@PathParam(value = "id") String id) {
+    @Path("/{site}/image/{id}")
+    public Image image(@PathParam(value = "site") String siteName, @PathParam(value = "id") String id) {
+        ImageDAO dao = new ImageDAO(siteName);
         return dao.getImage(new ImageName(id));
     }
 
     @GET
-    @Path("/imageInfo/{id}")
-    public Map<String, Object> imageInfo(@PathParam(value = "id") String id) {
+    @Path("/{site}/imageInfo/{id}")
+    public Map<String, Object> imageInfo(@PathParam(value = "site") String siteName, @PathParam(value = "id") String id) {
+        ImageDAO dao = new ImageDAO(siteName);
         Image image;
         ImageName in;
         if ("latest".equalsIgnoreCase(id)) {

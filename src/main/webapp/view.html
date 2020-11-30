@@ -113,14 +113,20 @@
                 <div id="osd-view" class="openseadragon content box">
                     <script type="text/javascript">
                         'use strict';
-                        const iif2 = "http://comcam-fp01.ls.lsst.org:8182/iiif/2/";
-                        const restURL = "rest/imageInfo/";
+                        let iif2 = "http://comcam-fp01.cp.lsst.org:8182/iiif/2/";
+                        let restURL = "rest/comcam/imageInfo/";
                         let urlParams = new URLSearchParams(window.location.search);
                         let imageName = urlParams.get('image');
                         let raftName = urlParams.get('raft');
-                        if (!raftName) raftName = "R22";
+                        if (imageName.startsWith("AT_")) {
+                            iif2 = "http://atsccs2.cp.lsst.org:8182/iiif/2/";
+                            restURL = "rest/auxtel/imageInfo/";
+                            raftName = "R00";
+                        } 
+                        if (!raftName)
+                            raftName = "R22";
                         if (imageName === "latest") {
-                                fetch(`${restURL}latest`)
+                            fetch(`${restURL}latest`)
                                     .then(function (response) {
                                         return response.json();
                                     })
@@ -202,9 +208,11 @@
                             srcHover: "openseadragon/images/previous_hover.png",
                             srcGroup: "openseadragon/images/previous_grouphover.png",
                             onClick: function (e) {
-                                imageName = imageInfo.previous;
-                                let identifier = `${imageName}_${raftName}`;
-                                osd.open([`${iif2}${identifier}/info.json`]);
+                                if (!e.eventSource.element.disabled) {
+                                    imageName = imageInfo.previous;
+                                    let identifier = `${imageName}_${raftName}`;
+                                    osd.open([`${iif2}${identifier}/info.json`]);
+                                }
                             }
                         });
 
@@ -215,9 +223,11 @@
                             srcHover: "openseadragon/images/next_hover.png",
                             srcGroup: "openseadragon/images/next_grouphover.png",
                             onClick: function (e) {
-                                imageName = imageInfo.next;
-                                let identifier = `${imageName}_${raftName}`;
-                                osd.open([`${iif2}${identifier}/info.json`]);
+                                if (!e.eventSource.element.disabled) {
+                                    imageName = imageInfo.next;
+                                    let identifier = `${imageName}_${raftName}`;
+                                    osd.open([`${iif2}${identifier}/info.json`]);
+                                }
                             }
                         });
 
@@ -243,14 +253,15 @@
                             raftName = $("#raft").val();
                             let identifier = `${imageName}_${raftName}`;
                             osd.open([`${iif2}${identifier}/info.json`]);
+
                         });
-                        $('#showLatest').on("change", function(e) {
+                        $('#showLatest').on("change", function (e) {
                             const checked = $('#showLatest').is(":checked");
-                            console.log(checked); 
+                            console.log(checked);
                             if (checked) {
                                 eventSource = new EventSource("rest/notify");
-                                
-                                eventSource.addEventListener("newImage", function(event) {
+
+                                eventSource.addEventListener("newImage", function (event) {
                                     console.log(event);
                                     imageName = event.lastEventId;
                                     let identifier = `${imageName}_${raftName}`;
@@ -287,6 +298,10 @@
                             $('#raft').val(raftName);
                             nextButton.disable();
                             prevButton.disable();
+                            let queryParams = new URLSearchParams(window.location.search);
+                            queryParams.set("image", imageName);
+                            queryParams.set("raft", raftName);
+                            history.replaceState(null, null, "?" + queryParams.toString());
                             fetch(`${restURL}${imageName}`)
                                     .then(function (response) {
                                         return response.json();
@@ -304,7 +319,6 @@
                                             prevButton.enable();
                                         if (imageInfo.next)
                                             nextButton.enable();
-                                        prevButton.enable();
                                         let n = 0;
                                         for (let i = 0; i < 25; i++) {
                                             let raft = image.raftMask >> i & 1;

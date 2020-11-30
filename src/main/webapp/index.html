@@ -15,6 +15,7 @@
         <div id="gridContainer"></div>
         <script>
             $(function () {
+                let site = "comcam";
                 let gridDataSource = new DevExpress.data.DataSource({
                     key: "obsId",
                     load: function (loadOptions) {
@@ -34,7 +35,7 @@
                             if (i in loadOptions && isNotEmpty(loadOptions[i]))
                                 params[i] = JSON.stringify(loadOptions[i]);
                         });
-                        $.getJSON("rest/images", params)
+                        $.getJSON("rest/"+site+"/images", params)
                                 .done(function (result) {
                                     d.resolve(result.data, {
                                         totalCount: result.totalCount,
@@ -60,7 +61,7 @@
                             location: "before",
                             widget: "dxSelectBox",
                             options: {
-                                dataSource: ["ComCam"],
+                                dataSource: ["ComCam", "AuxTel"],
                                 value: "ComCam",
                                 onValueChanged: function (data) {
                                     if (data.value === "ComCam") {
@@ -69,6 +70,14 @@
                                         dataGrid.columnOption("dayobs", "groupIndex", 0);
                                         dataGrid.columnOption("runNumber", "groupIndex", undefined);
                                         dataGrid.columnOption("runNumber", "visible", false);
+                                        site = "comcam";
+                                    } else if (data.value === "AuxTel") {
+                                        dataGrid.filter(["telCode", "=", "AT"]);
+                                        dataGrid.columnOption("dayobs", "visible", true);
+                                        dataGrid.columnOption("dayobs", "groupIndex", 0);
+                                        dataGrid.columnOption("runNumber", "groupIndex", undefined);
+                                        dataGrid.columnOption("runNumber", "visible", false);
+                                        site = "auxtel";
                                     } else {
                                         dataGrid.filter(["telCode", "=", "MC"]);
                                         dataGrid.columnOption("dayobs", "visible", false);
