@@ -15,7 +15,14 @@
         <div id="gridContainer"></div>
         <script>
             $(function () {
-                let site = "comcam";
+                let site = "comcam";                 
+                let urlParams = new URLSearchParams(window.location.search);
+                let view = urlParams.get('view');
+                if (isNotEmpty(view)) {
+                    site = view.toLowerCase();
+                } else {
+                    view = "ComCam";
+                }
                 let gridDataSource = new DevExpress.data.DataSource({
                     key: "obsId",
                     load: function (loadOptions) {
@@ -49,6 +56,30 @@
                 function isNotEmpty(value) {
                     return value !== undefined && value !== null && value !== "";
                 }
+                
+                function setView(view) {
+                    if (view === "ComCam") {
+                        dataGrid.filter(["telCode", "=", "CC"]);
+                        dataGrid.columnOption("dayobs", "visible", true);
+                        dataGrid.columnOption("dayobs", "groupIndex", 0);
+                        dataGrid.columnOption("runNumber", "groupIndex", undefined);
+                        dataGrid.columnOption("runNumber", "visible", false);
+                        site = "comcam";
+                    } else if (view === "AuxTel") {
+                        dataGrid.filter(["telCode", "=", "AT"]);
+                        dataGrid.columnOption("dayobs", "visible", true);
+                        dataGrid.columnOption("dayobs", "groupIndex", 0);
+                        dataGrid.columnOption("runNumber", "groupIndex", undefined);
+                        dataGrid.columnOption("runNumber", "visible", false);
+                        site = "auxtel";
+                    } else {
+                        dataGrid.filter(["telCode", "=", "MC"]);
+                        dataGrid.columnOption("dayobs", "visible", false);
+                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
+                        dataGrid.columnOption("runNumber", "groupIndex", 0);
+                        dataGrid.columnOption("runNumber", "visible", true);
+                    }
+                }
 
                 let dataGrid = $("#gridContainer").dxDataGrid({
                     dataSource: gridDataSource,
@@ -62,29 +93,9 @@
                             widget: "dxSelectBox",
                             options: {
                                 dataSource: ["ComCam", "AuxTel"],
-                                value: "ComCam",
+                                value: view,
                                 onValueChanged: function (data) {
-                                    if (data.value === "ComCam") {
-                                        dataGrid.filter(["telCode", "=", "CC"]);
-                                        dataGrid.columnOption("dayobs", "visible", true);
-                                        dataGrid.columnOption("dayobs", "groupIndex", 0);
-                                        dataGrid.columnOption("runNumber", "groupIndex", undefined);
-                                        dataGrid.columnOption("runNumber", "visible", false);
-                                        site = "comcam";
-                                    } else if (data.value === "AuxTel") {
-                                        dataGrid.filter(["telCode", "=", "AT"]);
-                                        dataGrid.columnOption("dayobs", "visible", true);
-                                        dataGrid.columnOption("dayobs", "groupIndex", 0);
-                                        dataGrid.columnOption("runNumber", "groupIndex", undefined);
-                                        dataGrid.columnOption("runNumber", "visible", false);
-                                        site = "auxtel";
-                                    } else {
-                                        dataGrid.filter(["telCode", "=", "MC"]);
-                                        dataGrid.columnOption("dayobs", "visible", false);
-                                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
-                                        dataGrid.columnOption("runNumber", "groupIndex", 0);
-                                        dataGrid.columnOption("runNumber", "visible", true);
-                                    }
+                                    setView(data.value);
                                 }
                             }
                         });
@@ -197,11 +208,7 @@
                             }]
                     }
                 }).dxDataGrid("instance");
-                dataGrid.filter(["telCode", "=", "CC"]);
-                dataGrid.columnOption("dayobs", "visible", true);
-                dataGrid.columnOption("dayobs", "groupIndex", 0);
-                dataGrid.columnOption("runNumber", "groupIndex", undefined);
-                dataGrid.columnOption("runNumber", "visible", false);
+                setView(view);
             });
         </script>
     </body>

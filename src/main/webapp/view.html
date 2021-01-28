@@ -114,15 +114,18 @@
                     <script type="text/javascript">
                         'use strict';
                         let iif2 = "http://comcam-fp01.cp.lsst.org:8182/iiif/2/";
-                        let restURL = "rest/comcam/imageInfo/";
                         let urlParams = new URLSearchParams(window.location.search);
                         let imageName = urlParams.get('image');
                         let raftName = urlParams.get('raft');
-                        if (imageName.startsWith("AT_")) {
+                        let site = "comcam";
+                        let view = urlParams.get('view');
+                        if (imageName.startsWith("AT_") || view == "AuxTel") {
                             iif2 = "http://atsccs2.cp.lsst.org:8182/iiif/2/";
-                            restURL = "rest/auxtel/imageInfo/";
                             raftName = "R00";
-                        } 
+                            site = "auxtel";
+                        }
+                        let restURL = "rest/"+site+"/imageInfo/";
+                        console.log(iif2);
                         if (!raftName)
                             raftName = "R22";
                         if (imageName === "latest") {
@@ -259,7 +262,7 @@
                             const checked = $('#showLatest').is(":checked");
                             console.log(checked);
                             if (checked) {
-                                eventSource = new EventSource("rest/notify");
+                                eventSource = new EventSource("rest/"+site+"/notify");
 
                                 eventSource.addEventListener("newImage", function (event) {
                                     console.log(event);
