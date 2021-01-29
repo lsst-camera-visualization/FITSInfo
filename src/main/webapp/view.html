@@ -106,23 +106,30 @@
                     <span class="field">Test Type: <input type="text" id="testType" size="8" readonly="readonly"></span>
                     <span class="field">Image Type: <input type="text" id="imageType" size="8" readonly="readonly"></span>
                     <span class="field">Exposure Time: <input type="text" id="exposureTime" size="8" readonly="readonly"></span>
-                    <span class="field">Dark Time: <input type="text" id="darkTime" size="8" readonly="readonly"></span>                    
+                    <span class="field">Dark Time: <input type="text" id="darkTime" size="8" readonly="readonly"></span>
+                    <span class="field" id="runField">Run: <input type="text" id="run" size="5" readonly="readonly"></span>                    
                     <span class="field">Time: <input type="text" id="time" size="15" readonly="readonly"></span>
                     <label for="showLatest">Show New: <input type="checkbox" id="showLatest"></label>
                 </div>            
                 <div id="osd-view" class="openseadragon content box">
                     <script type="text/javascript">
                         'use strict';
-                        let iif2 = "http://comcam-fp01.cp.lsst.org:8182/iiif/2/";
+                        let iif2 = "https://lsst-camera.slac.stanford.edu/iiif/2/";
                         let urlParams = new URLSearchParams(window.location.search);
                         let imageName = urlParams.get('image');
                         let raftName = urlParams.get('raft');
-                        let site = "comcam";
+                        let site = "maincamera";
                         let view = urlParams.get('view');
                         if (imageName.startsWith("AT_") || view == "AuxTel") {
                             iif2 = "http://atsccs2.cp.lsst.org:8182/iiif/2/";
                             raftName = "R00";
                             site = "auxtel";
+                            $("#runField").hide();
+                        } else if (imageName.startsWith("CC_") || view == "ComCam") {
+                            iif2 = "http://comcam-fp01.cp.lsst.org:8182/iiif/2/";
+                            raftName = "R22";
+                            site = "comcam";
+                            $("#runField").hide();
                         }
                         let restURL = "rest/"+site+"/imageInfo/";
                         console.log(iif2);
@@ -312,6 +319,7 @@
                                     .then(function (myJson) {
                                         imageInfo = myJson;
                                         let image = myJson.image;
+                                        $("#run").val(image.runNumber);
                                         $("#imageType").val(image.imgType);
                                         $("#testType").val(image.testType);
                                         $("#exposureTime").val(image.exposureTime);
