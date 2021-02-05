@@ -109,7 +109,9 @@
                     <span class="field">Dark Time: <input type="text" id="darkTime" size="8" readonly="readonly"></span>
                     <span class="field" id="runField">Run: <input type="text" id="run" size="5" readonly="readonly"></span>                    
                     <span class="field">Time: <input type="text" id="time" size="15" readonly="readonly"></span>
-                    <label for="showLatest">Show New: <input type="checkbox" id="showLatest"></label>
+                    <span class="field">Color: <select id="color"></select></span>
+                    <span class="field">Bias: <select id="bias"></select></span>
+                    <label for="showLatest">Auto Update: <input type="checkbox" id="showLatest"></label>
                 </div>            
                 <div id="osd-view" class="openseadragon content box">
                     <script type="text/javascript">
@@ -118,6 +120,8 @@
                         let urlParams = new URLSearchParams(window.location.search);
                         let imageName = urlParams.get('image');
                         let raftName = urlParams.get('raft');
+                        let colorMap = urlParams.get('color');
+                        let bias = urlParams.get('bias');
                         let site = "maincamera";
                         let view = urlParams.get('view');
                         if (imageName.startsWith("AT_") || view == "AuxTel") {
@@ -131,10 +135,17 @@
                             site = "comcam";
                             $("#runField").hide();
                         }
-                        let restURL = "rest/"+site+"/imageInfo/";
-                        console.log(iif2);
+                        let restURL = "rest/" + site + "/imageInfo/";
                         if (!raftName)
                             raftName = "R22";
+                        let colorMaps = ["grey", "a", "b", "bb", "cubehelix0", "cubehelix1", "rainbow", "standard"];
+                        if (!colorMap)
+                            colorMap = colorMaps[0];
+                        colorMaps.forEach(color => $("#color").append(`<option name="${color}">${color}</option>`));
+                        let biases = ["Simple Overscan Correction", "None"];
+                        if (!bias)
+                            bias = biases[0];
+                        biases.forEach(bias => $("#bias").append(`<option name="${bias}">${bias}</option>`));
                         if (imageName === "latest") {
                             fetch(`${restURL}latest`)
                                     .then(function (response) {
@@ -142,13 +153,13 @@
                                     })
                                     .then(function (myJson) {
                                         imageName = myJson.image.obsId;
-                                        let identifier = `${imageName}_${raftName}`;
+                                        let identifier = `${imageName}_${raftName}\$color=${colorMap}`;
                                         osd.open([`${iif2}${identifier}/info.json`]);
                                         $('#showLatest').prop('checked', true);
                                         $("#showLatest").trigger("change")
                                     });
                         }
-                        let identifier = `${imageName}_${raftName}`;
+                        let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
                         let imageInfo = null;
                         let showOverlay = false;
                         let eventSource = null;
@@ -177,6 +188,9 @@
                             } else {
                                 osd.clearOverlays();
                             }
+                        }
+                        function computeImageIdentifier(imageName, raftName, colorMap, bias) {
+                            return `${imageName}_${raftName}\$colorMap=${colorMap}\$biasCorrection=${bias}`;
                         }
 
                         let homeButton = new OpenSeadragon.Button({
@@ -220,7 +234,7 @@
                             onClick: function (e) {
                                 if (!e.eventSource.element.disabled) {
                                     imageName = imageInfo.previous;
-                                    let identifier = `${imageName}_${raftName}`;
+                                    let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
                                     osd.open([`${iif2}${identifier}/info.json`]);
                                 }
                             }
@@ -235,7 +249,7 @@
                             onClick: function (e) {
                                 if (!e.eventSource.element.disabled) {
                                     imageName = imageInfo.next;
-                                    let identifier = `${imageName}_${raftName}`;
+                                    let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
                                     osd.open([`${iif2}${identifier}/info.json`]);
                                 }
                             }
@@ -255,21 +269,32 @@
                         $('#imageName').on("keypress", function (e) {
                             if (e.keyCode === 13) {
                                 imageName = $("#imageName").val();
-                                let identifier = `${imageName}_${raftName}`;
+                                let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
                                 osd.open([`${iif2}${identifier}/info.json`]);
                             }
                         });
                         $('#raft').on("change", function (e) {
                             raftName = $("#raft").val();
-                            let identifier = `${imageName}_${raftName}`;
+                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
+                            osd.open([`${iif2}${identifier}/info.json`]);
+
+                        });
+                        $('#color').on("change", function (e) {
+                            colorMap = $("#color").val();
+                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
+                            osd.open([`${iif2}${identifier}/info.json`]);
+
+                        });
+                        $('#bias').on("change", function (e) {
+                            bias = $("#bias").val();
+                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
                             osd.open([`${iif2}${identifier}/info.json`]);
 
                         });
                         $('#showLatest').on("change", function (e) {
                             const checked = $('#showLatest').is(":checked");
-                            console.log(checked);
                             if (checked) {
-                                eventSource = new EventSource("rest/"+site+"/notify");
+                                eventSource = new EventSource("rest/" + site + "/notify");
 
                                 eventSource.addEventListener("newImage", function (event) {
                                     console.log(event);
@@ -306,11 +331,14 @@
                         osd.addHandler('open', () => {
                             $('#imageName').val(imageName);
                             $('#raft').val(raftName);
+                            $('#color').val(colorMap);
+                            $('#bias').val(bias);
                             nextButton.disable();
                             prevButton.disable();
                             let queryParams = new URLSearchParams(window.location.search);
                             queryParams.set("image", imageName);
                             queryParams.set("raft", raftName);
+                            queryParams.set("color", colorMap);
                             history.replaceState(null, null, "?" + queryParams.toString());
                             fetch(`${restURL}${imageName}`)
                                     .then(function (response) {
