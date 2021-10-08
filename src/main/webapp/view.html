@@ -111,6 +111,7 @@
                     <span class="field">Time: <input type="text" id="time" size="15" readonly="readonly"></span>
                     <span class="field">Color: <select id="color"></select></span>
                     <span class="field">Bias: <select id="bias"></select></span>
+                    <span class="field">Scale: <select id="scale"></select></span>
                     <label for="showLatest">Auto Update: <input type="checkbox" id="showLatest"></label>
                 </div>            
                 <div id="osd-view" class="openseadragon content box">
@@ -122,6 +123,7 @@
                         let raftName = urlParams.get('raft');
                         let colorMap = urlParams.get('color');
                         let bias = urlParams.get('bias');
+                        let scale = urlParams.get('scale');
                         let site = "maincamera";
                         let view = urlParams.get('view');
                         if (imageName.startsWith("AT_") || view == "AuxTel") {
@@ -142,10 +144,14 @@
                         if (!colorMap)
                             colorMap = colorMaps[0];
                         colorMaps.forEach(color => $("#color").append(`<option name="${color}">${color}</option>`));
-                        let biases = ["Simple Overscan Correction", "None"];
+                        let biases = ["Simple Overscan Subtraction", "None"];
                         if (!bias)
                             bias = biases[0];
                         biases.forEach(bias => $("#bias").append(`<option name="${bias}">${bias}</option>`));
+                        let scales = ["Global", "Per-Segment"];
+                        if (!scale)
+                            scale = scales[1];
+                        scales.forEach(scale => $("#scale").append(`<option name="${scale}">${scale}</option>`));
                         if (imageName === "latest") {
                             fetch(`${restURL}latest`)
                                     .then(function (response) {
@@ -189,8 +195,8 @@
                                 osd.clearOverlays();
                             }
                         }
-                        function computeImageIdentifier(imageName, raftName, colorMap, bias) {
-                            return `${imageName}_${raftName}\$colorMap=${colorMap}\$biasCorrection=${bias}`;
+                        function computeImageIdentifier(imageName, raftName, colorMap, bias, scale) {
+                            return `${imageName}_${raftName}\$colorMap=${colorMap}\$biasCorrection=${bias}\$scale=${scale}`;
                         }
 
                         let homeButton = new OpenSeadragon.Button({
@@ -269,25 +275,31 @@
                         $('#imageName').on("keypress", function (e) {
                             if (e.keyCode === 13) {
                                 imageName = $("#imageName").val();
-                                let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
+                                let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                                 osd.open([`${iif2}${identifier}/info.json`]);
                             }
                         });
                         $('#raft').on("change", function (e) {
                             raftName = $("#raft").val();
-                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
+                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                             osd.open([`${iif2}${identifier}/info.json`]);
 
                         });
                         $('#color').on("change", function (e) {
                             colorMap = $("#color").val();
-                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
+                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                             osd.open([`${iif2}${identifier}/info.json`]);
 
                         });
                         $('#bias').on("change", function (e) {
                             bias = $("#bias").val();
-                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
+                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
+                            osd.open([`${iif2}${identifier}/info.json`]);
+
+                        });
+                        $('#scale').on("change", function (e) {
+                            scale = $("#scale").val();
+                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                             osd.open([`${iif2}${identifier}/info.json`]);
 
                         });
@@ -333,12 +345,15 @@
                             $('#raft').val(raftName);
                             $('#color').val(colorMap);
                             $('#bias').val(bias);
+                            $('#scale').val(scale);
                             nextButton.disable();
                             prevButton.disable();
                             let queryParams = new URLSearchParams(window.location.search);
                             queryParams.set("image", imageName);
                             queryParams.set("raft", raftName);
                             queryParams.set("color", colorMap);
+                            queryParams.set("bias", bias);
+                            queryParams.set("scale", scale);
                             history.replaceState(null, null, "?" + queryParams.toString());
                             fetch(`${restURL}${imageName}`)
                                     .then(function (response) {

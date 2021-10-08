@@ -4,7 +4,7 @@ package org.lsst.ccs.imagenaming;
  * An enumeration of possible image sources.
  */
 public enum Source {
-    MainCamera("MC"), ComCam("CC"), AuxTel("AT");
+    MainCamera("MC"), ComCam("CC"), AuxTel("AT"), TestStand("TS");
     private final String code;
 
     private Source(String code) {

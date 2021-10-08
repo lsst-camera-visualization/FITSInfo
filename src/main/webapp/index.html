@@ -18,9 +18,9 @@
                 let urlParams = new URLSearchParams(window.location.search);
                 let serverName = window.location.hostname;
                 let host = serverName.indexOf("lsst.org")>=0 ? "chile" : serverName.indexOf("slac.stanford.edu")>=0 ? "slac" : "other";
-                let dataSources = ["Main Camera", "ComCam", "AuxTel"];
+                let dataSources = ["Main Camera", "ComCam", "AuxTel", "TS8"];
                 if (host == 'slac') {
-                    dataSources = ["Main Camera"];
+                    dataSources = ["Main Camera", "TS8"];
                 } else if (host == 'chile') {
                     dataSources = ["ComCam", "AuxTel"];
                 }
@@ -83,8 +83,17 @@
                         dataGrid.columnOption("run", "visible", false);
                         dataGrid.columnOption("runMode", "visible", false);
                         site = "auxtel";
-                    } else { // Main camera
+                    } else if (view === "Main Camera") { // Main camera
                         dataGrid.filter(["telCode", "=", "MC"]);
+                        dataGrid.columnOption("dayobs", "visible", false);
+                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
+                        dataGrid.columnOption("run", "groupIndex", 1);
+                        dataGrid.columnOption("runMode", "groupIndex", 0);
+                        dataGrid.columnOption("run", "visible", true);
+                        dataGrid.columnOption("runMode", "visible", true);
+                        site = "maincamera";
+                    } else { // TS8
+                        dataGrid.filter(["telCode", "=", "TS"]);
                         dataGrid.columnOption("dayobs", "visible", false);
                         dataGrid.columnOption("dayobs", "groupIndex", undefined);
                         dataGrid.columnOption("run", "groupIndex", 1);
