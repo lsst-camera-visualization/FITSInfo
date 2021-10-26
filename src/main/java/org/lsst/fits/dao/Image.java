@@ -42,6 +42,12 @@ public class Image implements Serializable {
     @Formula("concat(telcode,'_',controller,'_',dayobs,'_',lpad(seqnum,6,'0'))")
     private String obsId;
 
+    @Formula("cast(runNumber as INTEGER)")
+    private Long run;
+
+    @Formula("if(runNumber is null, 'NONE', if(runNumber like '%D','DEV','PROD'))")
+    private String runMode;
+    
     @Override
     public int hashCode() {
         int hash = 5;
@@ -104,6 +110,14 @@ public class Image implements Serializable {
         return runNumber;
     }
 
+    public Long getRun() {
+        return run;
+    }
+
+    public String getRunMode() {
+        return runMode;
+    }
+    
     public int getTseqnum() {
         return tseqnum == null ? 0 : tseqnum;
     }
@@ -121,7 +135,7 @@ public class Image implements Serializable {
     }
 
     public int getRaftMask() {
-        return raftMask;
+        return raftMask == 0 ? 4096 :raftMask;
     }
     
     public String getObsId() {

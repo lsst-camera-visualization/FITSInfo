@@ -10,7 +10,7 @@ import org.lsst.ccs.imagenaming.ImageName;
 public class Main {
 
     public static void main(String[] args) {
-        ImageDAO dao = new ImageDAO();
+        ImageDAO dao = new ImageDAO("comcam");
         List<Object> imageGroup = (List<Object>) dao.getImageGroup("runNumber", false, 0, 20, null);
         System.out.println(imageGroup);
         for (Object o : imageGroup) {

@@ -7,6 +7,7 @@ import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseBroadcaster;
 import javax.ws.rs.sse.SseEventSink;
 import org.lsst.ccs.imagenaming.ImageName;
+import org.lsst.ccs.imagenaming.Source;
 
 /**
  *
@@ -17,6 +18,7 @@ class NotificationsManager {
     private static NotificationsManager singleton;
     private final SseBroadcaster sseBroadcaster;
     private final OutboundSseEvent.Builder eventBuilder;
+    private String site;
 
     NotificationsManager(Sse sse) {
         this.sseBroadcaster = sse.newBroadcaster();
@@ -30,12 +32,17 @@ class NotificationsManager {
         return singleton;
     }
 
-    void register(SseEventSink sseEventSink) {
+    void register(String site, SseEventSink sseEventSink) {
+        this.site = site;
         sseBroadcaster.register(sseEventSink);
     }
 
     void notify(ImageName image, Map<String, String> data) {
 
+        if ("auxtel".equalsIgnoreCase(site) && image.getSource() != Source.AuxTel) return;
+        if ("comcam".equalsIgnoreCase(site) && image.getSource() != Source.ComCam) return;
+        if ("main".equalsIgnoreCase(site) && image.getSource() != Source.MainCamera) return;
+        
         OutboundSseEvent sseEvent = this.eventBuilder
                 .name("newImage")
                 .id(image.toString())

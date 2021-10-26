@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+    <session-factory>
+        <property name="connection.driver_class">com.mysql.jdbc.Driver</property>
+        <property name="connection.url">jdbc:mysql://lsst-ir2db01:3306/ir2dbprod?serverTimezone=UTC&amp;autoReconnect=true</property>
+        <property name="hibernate.connection.password">ccs23</property>
+        <property name="hibernate.connection.username">ccs</property>
+        <property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+        <property name="show_sql">true</property>
+        <property name="hbm2ddl.auto">validate</property>
+        <!-- See https://stackoverflow.com/questions/9674165/mysql-jdbc-timeout-even-with-autoreconnect-true -->
+        <property name="hibernate.c3p0.min_size">0</property>
+        <property name="hibernate.c3p0.max_size">20</property>
+        <property name="hibernate.c3p0.timeout">500</property>
+        <property name="hibernate.c3p0.max_statements">50</property>
+        <property name="hibernate.c3p0.idle_test_period">3000</property>
+        <property name="hibernate.c3p0.testConnectionOnCheckout">true</property>
+        <property name="hibernate.c3p0.acquire_increment">1</property>
+        <mapping class="org.lsst.fits.dao.Image"/>
+    </session-factory>
+</hibernate-configuration>

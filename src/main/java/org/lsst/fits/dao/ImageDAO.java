@@ -20,8 +20,14 @@ import org.lsst.fits.fitsinfo.Sort;
  */
 public class ImageDAO {
 
+    private final String site;
+    
+    public ImageDAO(String site) {
+        this.site = site;
+    }
+
     public List<Image> getImages(int skip, int take, Filter filter, Sort sort) {
-        try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession(site)) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
 
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
@@ -52,7 +58,7 @@ public class ImageDAO {
     }
 
     public Image getImage(ImageName in) {
-        try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession(site)) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
             Root<Image> root = criteria.from(Image.class);
@@ -68,7 +74,7 @@ public class ImageDAO {
     }
 
     public Image getLatestImage() {
-        try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession(site)) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
             Root<Image> root = criteria.from(Image.class);
@@ -87,7 +93,7 @@ public class ImageDAO {
     }
 
     public String getNextImage(ImageName in) {
-        try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession(site)) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
             Root<Image> root = criteria.from(Image.class);
@@ -117,7 +123,7 @@ public class ImageDAO {
     }
 
     public String getPreviousImage(ImageName in) {
-        try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession(site)) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
             CriteriaQuery<Image> criteria = builder.createQuery(Image.class);
             Root<Image> root = criteria.from(Image.class);
@@ -147,7 +153,7 @@ public class ImageDAO {
     }
 
     public Long getTotalImageCount(Filter filter) {
-        try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession(site)) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
 
             CriteriaQuery<Long> countQuery = builder.createQuery(Long.class);
@@ -162,7 +168,7 @@ public class ImageDAO {
     }
 
     public List<Object> getImageGroup(String groupSelector, boolean desc, int skip, int take, Filter filter) {
-        try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession(site)) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
             CriteriaQuery<Object> criteria = builder.createQuery();
             Root<Image> root = criteria.from(Image.class);
@@ -189,7 +195,7 @@ public class ImageDAO {
     }
 
     public Long getImageGroupCount(String groupSelector, Filter filter) {
-        try (Session session = SessionUtil.getSession()) {
+        try (Session session = SessionUtil.getSession(site)) {
             CriteriaBuilder builder = session.getCriteriaBuilder();
 
             CriteriaQuery<Long> countQuery = builder.createQuery(Long.class);

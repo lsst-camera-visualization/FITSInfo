@@ -1,10 +1,10 @@
 <html>
     <head>
         <title>LSST Camera Image Browser</title>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
-        <link rel="stylesheet" type="text/css" href="https://cdn3.devexpress.com/jslib/19.1.3/css/dx.common.css" />
-        <link rel="dx-theme" data-theme="generic.light" href="https://cdn3.devexpress.com/jslib/19.1.3/css/dx.light.css" />
-        <script src="https://cdn3.devexpress.com/jslib/19.1.3/js/dx.all.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://cdn3.devexpress.com/jslib/20.2.5/css/dx.common.css" />
+        <link rel="dx-theme" data-theme="generic.light" href="https://cdn3.devexpress.com/jslib/20.2.5/css/dx.light.css" />
+        <script src="https://cdn3.devexpress.com/jslib/20.2.5/js/dx.all.js"></script>
         <style>
             #gridContainer {
                 height: 100%;
@@ -15,6 +15,21 @@
         <div id="gridContainer"></div>
         <script>
             $(function () {
+                let urlParams = new URLSearchParams(window.location.search);
+                let serverName = window.location.hostname;
+                let host = serverName.indexOf("lsst.org")>=0 ? "chile" : serverName.indexOf("slac.stanford.edu")>=0 ? "slac" : "other";
+                let dataSources = ["Main Camera", "ComCam", "AuxTel", "TS8"];
+                if (host == 'slac') {
+                    dataSources = ["Main Camera", "TS8"];
+                } else if (host == 'chile') {
+                    dataSources = ["ComCam", "AuxTel"];
+                }
+                let view = urlParams.get('view');
+                if (isNotEmpty(view)) {
+                    let site = view.toLowerCase();
+                } else {
+                    view = dataSources[0];
+                }
                 let gridDataSource = new DevExpress.data.DataSource({
                     key: "obsId",
                     load: function (loadOptions) {
@@ -34,7 +49,7 @@
                             if (i in loadOptions && isNotEmpty(loadOptions[i]))
                                 params[i] = JSON.stringify(loadOptions[i]);
                         });
-                        $.getJSON("rest/images", params)
+                        $.getJSON("rest/"+site+"/images", params)
                                 .done(function (result) {
                                     d.resolve(result.data, {
                                         totalCount: result.totalCount,
@@ -48,6 +63,46 @@
                 function isNotEmpty(value) {
                     return value !== undefined && value !== null && value !== "";
                 }
+                
+                function setView(view) {
+                    if (view === "ComCam") {
+                        dataGrid.filter(["telCode", "=", "CC"]);
+                        dataGrid.columnOption("dayobs", "visible", true);
+                        dataGrid.columnOption("dayobs", "groupIndex", 0);
+                        dataGrid.columnOption("run", "groupIndex", undefined);
+                        dataGrid.columnOption("runMode", "groupIndex", undefined);
+                        dataGrid.columnOption("run", "visible", false);
+                        dataGrid.columnOption("runMode", "visible", false);
+                        site = "comcam";
+                    } else if (view === "AuxTel") {
+                        dataGrid.filter(["telCode", "=", "AT"]);
+                        dataGrid.columnOption("dayobs", "visible", true);
+                        dataGrid.columnOption("dayobs", "groupIndex", 0);
+                        dataGrid.columnOption("run", "groupIndex", undefined);
+                        dataGrid.columnOption("runMode", "groupIndex", undefined);
+                        dataGrid.columnOption("run", "visible", false);
+                        dataGrid.columnOption("runMode", "visible", false);
+                        site = "auxtel";
+                    } else if (view === "Main Camera") { // Main camera
+                        dataGrid.filter(["telCode", "=", "MC"]);
+                        dataGrid.columnOption("dayobs", "visible", false);
+                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
+                        dataGrid.columnOption("run", "groupIndex", 1);
+                        dataGrid.columnOption("runMode", "groupIndex", 0);
+                        dataGrid.columnOption("run", "visible", true);
+                        dataGrid.columnOption("runMode", "visible", true);
+                        site = "maincamera";
+                    } else { // TS8
+                        dataGrid.filter(["telCode", "=", "TS"]);
+                        dataGrid.columnOption("dayobs", "visible", false);
+                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
+                        dataGrid.columnOption("run", "groupIndex", 1);
+                        dataGrid.columnOption("runMode", "groupIndex", 0);
+                        dataGrid.columnOption("run", "visible", true);
+                        dataGrid.columnOption("runMode", "visible", true);
+                        site = "maincamera";
+                    }
+                }
 
                 let dataGrid = $("#gridContainer").dxDataGrid({
                     dataSource: gridDataSource,
@@ -55,27 +110,16 @@
                     rowAlternationEnabled: true,
                     allowColumnReordering: true,
                     allowColumnResizing: true,
+                    columnAutoWidth: true,
                     onToolbarPreparing: function (e) {
                         e.toolbarOptions.items.unshift({
                             location: "before",
                             widget: "dxSelectBox",
                             options: {
-                                dataSource: ["Main Camera", "ComCam"],
-                                value: "Main Camera",
+                                dataSource: dataSources,
+                                value: view,
                                 onValueChanged: function (data) {
-                                    if (data.value === "ComCam") {
-                                        dataGrid.filter(["telCode", "=", "CC"]);
-                                        dataGrid.columnOption("dayobs", "visible", true);
-                                        dataGrid.columnOption("dayobs", "groupIndex", 0);
-                                        dataGrid.columnOption("runNumber", "groupIndex", undefined);
-                                        dataGrid.columnOption("runNumber", "visible", false);
-                                    } else {
-                                        dataGrid.filter(["telCode", "=", "MC"]);
-                                        dataGrid.columnOption("dayobs", "visible", false);
-                                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
-                                        dataGrid.columnOption("runNumber", "groupIndex", 0);
-                                        dataGrid.columnOption("runNumber", "visible", true);
-                                    }
+                                    setView(data.value);
                                 }
                             }
                         });
@@ -102,7 +146,7 @@
                     columns: [
                         {
                             dataField: "obsId",
-                            sortOrder: "asc"
+                            sortOrder: "desc"
                         },
                         {
                             dataField: "imgType",
@@ -143,15 +187,25 @@
                                     }
                                 }
                                 if (n > 2) {
-                                   element.prepend(`<a href="view.html?image=${cellInfo.data.obsId}&raft=all" target="imageViewer">All</a> `);                                        
+                                    element.prepend(`<a href="view.html?image=${cellInfo.data.obsId}&raft=all" target="imageViewer">All</a> `);
                                 }
                             }
-                        },
+                        },                       
                         {
                             dataField: "runNumber",
-                            groupIndex: 0,
+                            visible: false,
                             sortOrder: "desc"
                         },
+                        {
+                            dataField: "run",
+                            visible: false,
+                            sortOrder: "desc"
+                        }, 
+                        {
+                            dataField: "runMode",
+                            visible: false,
+                            sortOrder: "desc"
+                        }, 
                         {
                             dataField: "dayobs",
                             caption: "Obs Day",
@@ -188,7 +242,7 @@
                             }]
                     }
                 }).dxDataGrid("instance");
-                dataGrid.filter(["telCode", "=", "MC"]);
+                setView(view);
             });
         </script>
     </body>
