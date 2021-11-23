@@ -91,6 +91,29 @@
             .menu_show {
                 left: 0!important;
             }
+            
+            #datastrip {
+                position: fixed;
+                right: 0;
+                bottom:0;
+                background: #ccd;
+                color: #334;
+            }
+            #datastrip > * {
+                display: inline-block;
+            }
+            #xy-coord {
+                width: 400px;
+            }
+            #color-array {
+                width: 8em;
+                padding: 2px 4px;
+            }
+            #color-spot {
+                width: 1em;
+                height: 1em;
+                vertical-align: -.133em;
+            }
         </style>
     </head>
     <body>
@@ -118,6 +141,7 @@
                     <script type="text/javascript">
                         'use strict';
                         let iif2 = "https://lsst-camera.slac.stanford.edu/iiif/2/";
+                        let geometry = [];
                         let urlParams = new URLSearchParams(window.location.search);
                         let imageName = urlParams.get('image');
                         let raftName = urlParams.get('raft');
@@ -126,7 +150,13 @@
                         let scale = urlParams.get('scale');
                         let site = "maincamera";
                         let view = urlParams.get('view');
-                        if (imageName.startsWith("AT_") || view == "AuxTel") {
+                        if (view == "Tucson") {
+                            iif2 = "http://comcam-dc01.tu.lsst.org:8182/iiif/2/";
+                            raftName = "R22";
+                            site = "tucson";
+                            $("#runField").hide();
+                        }                    
+                        else if (imageName.startsWith("AT_") || view == "AuxTel") {
                             iif2 = "http://atsccs2.cp.lsst.org:8182/iiif/2/";
                             raftName = "R00";
                             site = "auxtel";
@@ -320,7 +350,7 @@
                         });
                         new OpenSeadragon.ButtonGroup({buttons: [zoomInButton, zoomOutButton, homeButton, fullPageButton, overlayButton], element: $("#buttons")[0]});
                         new OpenSeadragon.ButtonGroup({buttons: [prevButton, nextButton], element: $("#nextPrev")[0]});
-
+                        
                         let osd = OpenSeadragon({
                             id: "osd-view",
                             prefixUrl: "openseadragon/images/",
@@ -388,12 +418,82 @@
                                             $("#raft").prepend(`<option ${selected}>all</option>`);
                                         }
                                     });
-                        });
+                                    
+                            });
+                            fetch(`${iif2}${identifier}/geominfo.json`)
+                            .then(function (response) {
+                                return response.json();
+                            })
+                            .then(function (myJson) {
+                                geometry = myJson.geometry;
+                            });
+
+                        class AffineTransform {
+                            constructor(flatmatrix) {
+                               this.m00 = flatmatrix[0];
+                               this.m10 = flatmatrix[1];
+                               this.m01 = flatmatrix[2];
+                               this.m11 = flatmatrix[3];
+                               this.m02 = flatmatrix[4];
+                               this.m12 = flatmatrix[5];
+                            }
+                            
+                            transform(x,y) {
+                                return [x * this.m00 + y * this.m01 + this.m02,
+                                        x * this.m10 + y * this.m11 + this.m12];
+                            }
+                        }
+
+                        const moveHandler = async function(event) {
+                            const mousePoint = new OpenSeadragon.Point(event.position.x, event.position.y)
+                            const tiledImage = osd.world.getItemAt(0)
+                            const realHoverPosition = tiledImage.viewerElementToImageCoordinates(mousePoint);
+                            // size of the main image
+                            const realSize = tiledImage.getContentSize();
+                            //console.log("Move "+mousePoint+" "+tiledImage+" "+realHoverPosition+" "+realSize);
+                            const offHorizontally = realHoverPosition.x < 0 || realHoverPosition.x > realSize.x
+                            const offVertically = realHoverPosition.y < 0 || realHoverPosition.y > realSize.y;
+                            const isHovering = !offHorizontally && !offVertically;
+                            if (isHovering) {
+                                let x = Math.floor(realHoverPosition.x);
+                                let y = Math.floor(realSize.y - realHoverPosition.y);
+                                let text = `x: ${x}, y: ${y}`;
+                                for (const g of geometry) {
+                                   if ((x>=g.x && x<g.x+g.width) &&  (y>=g.y && y<g.y+g.height)) {
+                                       let name = g.raftBay+"/"+g.ccdSlot+"/"+g.segmentName;
+                                       let at = new AffineTransform(g.flatmatrix)
+                                       let xy = at.transform(x,y);
+                                       let xx = Math.round(xy[0]);
+                                       let yy = Math.round(xy[1]);
+                                       text += `, ${name}, ${xx}, ${yy}`;
+                                       fetch(`${iif2}${identifier}/${x},${y}/pixel.json`)
+                                         .then(function (response) {
+                                             return response.json();
+                                         })
+                                         .then(function (myJson) {
+                                             if (myJson.x == x && myJson.y == y) {
+                                                 $("#xy-coord").text(text + ", "+ myJson.pixel);
+                                             }
+                                         });
+                                       break;
+                                   }
+                                }
+                                $("#xy-coord").text(text);
+                            } else {
+                                $("#xy-coord").text("");
+                            }
+                        }
+                        
+                        let mh = new OpenSeadragon.MouseTracker({"moveHandler": moveHandler, "element": "osd-view"});
+
                     </script>
                     <noscript>
                     <p>OpenSeadragon is not available unless JavaScript is enabled.</p>
                     </noscript>
                 </div>
+            </div>
+            <div id="datastrip">
+                <div id="xy-coord">Hello!!!!</div>
             </div>
         </div>
     </body>

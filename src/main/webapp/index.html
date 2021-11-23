@@ -18,7 +18,7 @@
                 let urlParams = new URLSearchParams(window.location.search);
                 let serverName = window.location.hostname;
                 let host = serverName.indexOf("lsst.org")>=0 ? "chile" : serverName.indexOf("slac.stanford.edu")>=0 ? "slac" : "other";
-                let dataSources = ["Main Camera", "ComCam", "AuxTel", "TS8"];
+                let dataSources = ["Main Camera", "ComCam", "AuxTel", "TS8", "ComCam Tucson"];
                 if (host == 'slac') {
                     dataSources = ["Main Camera", "TS8"];
                 } else if (host == 'chile') {
@@ -92,7 +92,7 @@
                         dataGrid.columnOption("run", "visible", true);
                         dataGrid.columnOption("runMode", "visible", true);
                         site = "maincamera";
-                    } else { // TS8
+                    } else if (view == "TS8") { // TS8
                         dataGrid.filter(["telCode", "=", "TS"]);
                         dataGrid.columnOption("dayobs", "visible", false);
                         dataGrid.columnOption("dayobs", "groupIndex", undefined);
@@ -101,6 +101,15 @@
                         dataGrid.columnOption("run", "visible", true);
                         dataGrid.columnOption("runMode", "visible", true);
                         site = "maincamera";
+                    } else { // ComCam Tucson
+                        dataGrid.filter(["telCode", "=", "CC"]);
+                        dataGrid.columnOption("dayobs", "visible", true);
+                        dataGrid.columnOption("dayobs", "groupIndex", 0);
+                        dataGrid.columnOption("run", "groupIndex", undefined);
+                        dataGrid.columnOption("runMode", "groupIndex", undefined);
+                        dataGrid.columnOption("run", "visible", false);
+                        dataGrid.columnOption("runMode", "visible", false);
+                        site = "tucson";
                     }
                 }
 

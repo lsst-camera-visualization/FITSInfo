@@ -6,7 +6,7 @@
 <hibernate-configuration>
     <session-factory>
         <property name="connection.driver_class">com.mysql.jdbc.Driver</property>
-        <property name="connection.url">jdbc:mysql://lsst-ir2db01:3306/ir2dbprod?serverTimezone=UTC&amp;autoReconnect=true</property>
+        <property name="connection.url">jdbc:mysql://localhost:3306/ir2dbprod?serverTimezone=UTC&amp;autoReconnect=true</property>
         <property name="hibernate.connection.password">ccs23</property>
         <property name="hibernate.connection.username">ccs</property>
         <property name="dialect">org.hibernate.dialect.MySQLDialect</property>

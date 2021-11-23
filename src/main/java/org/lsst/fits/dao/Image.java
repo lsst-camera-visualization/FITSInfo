@@ -45,7 +45,7 @@ public class Image implements Serializable {
     @Formula("cast(runNumber as INTEGER)")
     private Long run;
 
-    @Formula("if(runNumber is null, 'NONE', if(runNumber like '%D','DEV','PROD'))")
+    @Formula("CASE WHEN runNumber is null THEN 'NONE' ELSE CASE WHEN runNumber like '%D' THEN 'DEV' ELSE 'PROD' END END")
     private String runMode;
     
     @Override
