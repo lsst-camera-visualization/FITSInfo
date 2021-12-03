@@ -7,6 +7,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
+import org.lsst.ccs.imagenaming.Source;
 
 /**
  *
@@ -19,6 +20,13 @@ public class EventSender {
     @GET
     @Produces("text/event-stream")
     public void getImageNotifications(@Context Sse sse, @Context SseEventSink sseEventSink, @PathParam(value = "site") String siteName) {
-        NotificationsManager.connect(sse).register(siteName, sseEventSink);
+        Source source;
+        if ("auxtel".equalsIgnoreCase(siteName)) source =  Source.AuxTel;
+        else if ("comcam".equalsIgnoreCase(siteName)) source =  Source.ComCam;
+        else if ("main".equalsIgnoreCase(siteName)) source =  Source.MainCamera;
+        else {
+            source = Source.valueOf(siteName);
+        }
+        NotificationsManager.connect(sse).register(source, sseEventSink);
     }
 }

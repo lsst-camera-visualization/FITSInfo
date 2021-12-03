@@ -1,6 +1,7 @@
 package org.lsst.fits.fitsinfo;
 
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.sse.OutboundSseEvent;
 import javax.ws.rs.sse.Sse;
@@ -10,18 +11,20 @@ import org.lsst.ccs.imagenaming.ImageName;
 import org.lsst.ccs.imagenaming.Source;
 
 /**
+ * A singleton class which routes new image notifications to clients using SSE
+ * to receive notifications of new images.
  *
  * @author tonyj
  */
 class NotificationsManager {
 
     private static NotificationsManager singleton;
-    private final SseBroadcaster sseBroadcaster;
     private final OutboundSseEvent.Builder eventBuilder;
-    private String site;
+    private final Map<Source, SseBroadcaster> sourceBroadcaster = new ConcurrentHashMap<>();
+    private final Sse sse;
 
-    NotificationsManager(Sse sse) {
-        this.sseBroadcaster = sse.newBroadcaster();
+    private NotificationsManager(Sse sse) {
+        this.sse = sse;
         this.eventBuilder = sse.newEventBuilder();
     }
 
@@ -32,26 +35,25 @@ class NotificationsManager {
         return singleton;
     }
 
-    void register(String site, SseEventSink sseEventSink) {
-        this.site = site;
-        sseBroadcaster.register(sseEventSink);
+    void register(Source source, SseEventSink sseEventSink) {
+        sourceBroadcaster.putIfAbsent(source, sse.newBroadcaster());
+        sourceBroadcaster.get(source).register(sseEventSink);
     }
 
     void notify(ImageName image, Map<String, String> data) {
 
-        if ("auxtel".equalsIgnoreCase(site) && image.getSource() != Source.AuxTel) return;
-        if ("comcam".equalsIgnoreCase(site) && image.getSource() != Source.ComCam) return;
-        if ("main".equalsIgnoreCase(site) && image.getSource() != Source.MainCamera) return;
-        
-        OutboundSseEvent sseEvent = this.eventBuilder
-                .name("newImage")
-                .id(image.toString())
-                .mediaType(MediaType.APPLICATION_JSON_TYPE)
-                .reconnectDelay(4000)
-                .data(data)
-                .comment("new image")
-                .build();
-        sseBroadcaster.broadcast(sseEvent);
+        SseBroadcaster broadCaster = sourceBroadcaster.get(image.getSource());
+        if (broadCaster != null) {
+            OutboundSseEvent sseEvent = this.eventBuilder
+                    .name("newImage")
+                    .id(image.toString())
+                    .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                    .reconnectDelay(4000)
+                    .data(data)
+                    .comment("new image")
+                    .build();
+            broadCaster.broadcast(sseEvent);
+        }
     }
 
 }
