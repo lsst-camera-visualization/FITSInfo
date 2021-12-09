@@ -91,7 +91,7 @@
             .menu_show {
                 left: 0!important;
             }
-            
+
             #datastrip {
                 position: fixed;
                 right: 0;
@@ -150,19 +150,19 @@
                         let scale = urlParams.get('scale');
                         let site = "maincamera";
                         let view = urlParams.get('view');
-                        if (view == "Tucson") {
+                        let timerId = null;
+                        if (view === "Tucson") {
                             iif2 = "http://comcam-dc01.tu.lsst.org:8182/iiif/2/";
                             raftName = "R22";
                             site = "tucson";
                             $("#runField").hide();
-                        }                    
-                        else if (imageName.startsWith("AT_") || view == "AuxTel") {
+                        } else if (imageName.startsWith("AT_") || view === "AuxTel") {
                             iif2 = "http://atsccs2.cp.lsst.org:8182/iiif/2/";
                             raftName = "R00";
                             site = "auxtel";
                             $("#runField").hide();
-                        } else if (imageName.startsWith("CC_") || view == "ComCam") {
-                            iif2 = "http://comcam-fp01.cp.lsst.org:8182/iiif/2/";
+                        } else if (imageName.startsWith("CC_") || view === "ComCam") {
+                            iif2 = "http://comcam-vs01.cp.lsst.org:8182/iiif/2/";
                             raftName = "R22";
                             site = "comcam";
                             $("#runField").hide();
@@ -174,7 +174,7 @@
                         if (!colorMap)
                             colorMap = colorMaps[0];
                         colorMaps.forEach(color => $("#color").append(`<option name="${color}">${color}</option>`));
-                        let biases = ["Simple Overscan Subtraction", "None"];
+                        let biases = ["Simple Overscan Correction", "None"];
                         if (!bias)
                             bias = biases[0];
                         biases.forEach(bias => $("#bias").append(`<option name="${bias}">${bias}</option>`));
@@ -192,10 +192,10 @@
                                         let identifier = `${imageName}_${raftName}\$color=${colorMap}`;
                                         osd.open([`${iif2}${identifier}/info.json`]);
                                         $('#showLatest').prop('checked', true);
-                                        $("#showLatest").trigger("change")
+                                        $("#showLatest").trigger("change");
                                     });
                         }
-                        let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
+                        let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                         let imageInfo = null;
                         let showOverlay = false;
                         let eventSource = null;
@@ -270,7 +270,7 @@
                             onClick: function (e) {
                                 if (!e.eventSource.element.disabled) {
                                     imageName = imageInfo.previous;
-                                    let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
+                                    identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                                     osd.open([`${iif2}${identifier}/info.json`]);
                                 }
                             }
@@ -285,51 +285,51 @@
                             onClick: function (e) {
                                 if (!e.eventSource.element.disabled) {
                                     imageName = imageInfo.next;
-                                    let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias);
+                                    identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                                     osd.open([`${iif2}${identifier}/info.json`]);
                                 }
                             }
                         });
 
-                        let overlayButton = new OpenSeadragon.Button({
-                            tooltip: "Toggle Overlays",
-                            srcRest: "openseadragon/images/button_rest.png",
-                            srcDown: "openseadragon/images/button_pressed.png",
-                            srcHover: "openseadragon/images/button_hover.png",
-                            srcGroup: "openseadragon/images/button_grouphover.png",
-                            onClick: function (e) {
-                                showOverlay = !showOverlay;
-                                showHideOverlays(showOverlay);
-                            }
-                        });
+                        //let overlayButton = new OpenSeadragon.Button({
+                        //    tooltip: "Toggle Overlays",
+                        //    srcRest: "openseadragon/images/button_rest.png",
+                        //    srcDown: "openseadragon/images/button_pressed.png",
+                        //    srcHover: "openseadragon/images/button_hover.png",
+                        //    srcGroup: "openseadragon/images/button_grouphover.png",
+                        //    onClick: function (e) {
+                        //        showOverlay = !showOverlay;
+                        //        showHideOverlays(showOverlay);
+                        //    }
+                        //});
                         $('#imageName').on("keypress", function (e) {
                             if (e.keyCode === 13) {
                                 imageName = $("#imageName").val();
-                                let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
+                                identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                                 osd.open([`${iif2}${identifier}/info.json`]);
                             }
                         });
                         $('#raft').on("change", function (e) {
                             raftName = $("#raft").val();
-                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
+                            identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                             osd.open([`${iif2}${identifier}/info.json`]);
 
                         });
                         $('#color').on("change", function (e) {
                             colorMap = $("#color").val();
-                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
+                            identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                             osd.open([`${iif2}${identifier}/info.json`]);
 
                         });
                         $('#bias').on("change", function (e) {
                             bias = $("#bias").val();
-                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
+                            identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                             osd.open([`${iif2}${identifier}/info.json`]);
 
                         });
                         $('#scale').on("change", function (e) {
                             scale = $("#scale").val();
-                            let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
+                            identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale);
                             osd.open([`${iif2}${identifier}/info.json`]);
 
                         });
@@ -348,9 +348,9 @@
                                 eventSource.close();
                             }
                         });
-                        new OpenSeadragon.ButtonGroup({buttons: [zoomInButton, zoomOutButton, homeButton, fullPageButton, overlayButton], element: $("#buttons")[0]});
+                        new OpenSeadragon.ButtonGroup({buttons: [zoomInButton, zoomOutButton, homeButton, fullPageButton], element: $("#buttons")[0]});
                         new OpenSeadragon.ButtonGroup({buttons: [prevButton, nextButton], element: $("#nextPrev")[0]});
-                        
+
                         let osd = OpenSeadragon({
                             id: "osd-view",
                             prefixUrl: "openseadragon/images/",
@@ -365,7 +365,8 @@
                             zoomInButton: zoomInButton.element,
                             zoomOutButton: zoomOutButton.element,
                             preserveOverlays: true,
-                            preserveViewport: true
+                            preserveViewport: true,
+                            maxZoomPixelRatio: 2
                         });
                         // Get rid of mystery div created by the code above, else toolbar messed up.
                         $('#toolbarDiv').children().last().remove();
@@ -418,40 +419,40 @@
                                             $("#raft").prepend(`<option ${selected}>all</option>`);
                                         }
                                     });
-                                    
-                            });
+                            geometry = [];
                             fetch(`${iif2}${identifier}/geominfo.json`)
-                            .then(function (response) {
-                                return response.json();
-                            })
-                            .then(function (myJson) {
-                                geometry = myJson.geometry;
-                            });
+                                .then(function (response) {
+                                    return response.json();
+                                })
+                                .then(function (myJson) {
+                                    geometry = myJson.geometry;
+                                });
+                        });
 
                         class AffineTransform {
                             constructor(flatmatrix) {
-                               this.m00 = flatmatrix[0];
-                               this.m10 = flatmatrix[1];
-                               this.m01 = flatmatrix[2];
-                               this.m11 = flatmatrix[3];
-                               this.m02 = flatmatrix[4];
-                               this.m12 = flatmatrix[5];
+                                this.m00 = flatmatrix[0];
+                                this.m10 = flatmatrix[1];
+                                this.m01 = flatmatrix[2];
+                                this.m11 = flatmatrix[3];
+                                this.m02 = flatmatrix[4];
+                                this.m12 = flatmatrix[5];
                             }
-                            
-                            transform(x,y) {
+
+                            transform(x, y) {
                                 return [x * this.m00 + y * this.m01 + this.m02,
-                                        x * this.m10 + y * this.m11 + this.m12];
+                                    x * this.m10 + y * this.m11 + this.m12];
                             }
                         }
 
-                        const moveHandler = async function(event) {
-                            const mousePoint = new OpenSeadragon.Point(event.position.x, event.position.y)
-                            const tiledImage = osd.world.getItemAt(0)
+                        const moveHandler = async function (event) {
+                            const mousePoint = new OpenSeadragon.Point(event.position.x, event.position.y);
+                            const tiledImage = osd.world.getItemAt(0);
                             const realHoverPosition = tiledImage.viewerElementToImageCoordinates(mousePoint);
                             // size of the main image
                             const realSize = tiledImage.getContentSize();
                             //console.log("Move "+mousePoint+" "+tiledImage+" "+realHoverPosition+" "+realSize);
-                            const offHorizontally = realHoverPosition.x < 0 || realHoverPosition.x > realSize.x
+                            const offHorizontally = realHoverPosition.x < 0 || realHoverPosition.x > realSize.x;
                             const offVertically = realHoverPosition.y < 0 || realHoverPosition.y > realSize.y;
                             const isHovering = !offHorizontally && !offVertically;
                             if (isHovering) {
@@ -459,32 +460,45 @@
                                 let y = Math.floor(realSize.y - realHoverPosition.y);
                                 let text = `x: ${x}, y: ${y}`;
                                 for (const g of geometry) {
-                                   if ((x>=g.x && x<g.x+g.width) &&  (y>=g.y && y<g.y+g.height)) {
-                                       let name = g.raftBay+"/"+g.ccdSlot+"/"+g.segmentName;
-                                       let at = new AffineTransform(g.flatmatrix)
-                                       let xy = at.transform(x,y);
-                                       let xx = Math.round(xy[0]);
-                                       let yy = Math.round(xy[1]);
-                                       text += `, ${name}, ${xx}, ${yy}`;
-                                       fetch(`${iif2}${identifier}/${x},${y}/pixel.json`)
-                                         .then(function (response) {
-                                             return response.json();
-                                         })
-                                         .then(function (myJson) {
-                                             if (myJson.x == x && myJson.y == y) {
-                                                 $("#xy-coord").text(text + ", "+ myJson.pixel);
-                                             }
-                                         });
-                                       break;
-                                   }
+                                    if ((x >= g.x && x < g.x + g.width) && (y >= g.y && y < g.y + g.height)) {
+                                        let name = g.raftBay + "/" + g.ccdSlot + "/" + g.segmentName;
+                                        let at = new AffineTransform(g.flatmatrix);
+                                        let xy = at.transform(x, y);
+                                        let xx = Math.round(xy[0]);
+                                        let yy = Math.round(xy[1]);
+                                        text += `, ${name}(${xx}, ${yy})`;
+                                        // We want to delay the pixel value fetch unless mouse held in a fixed position
+                                        // for a certain time (100ms)
+                                        let delayedFunction = function() {
+                                            fetch(`${iif2}${identifier}/${x},${y}/pixel.json`)
+                                                    .then(function (response) {
+                                                        return response.json();
+                                                    })
+                                                    .then(function (myJson) {
+                                                        if (myJson.x == x && myJson.y == y) {
+                                                            $("#xy-coord").text(text + ": " + myJson.pixel);
+                                                        }
+                                                    });
+                                        };
+                                        if (timerId) {
+                                            clearTimeout(timerId);
+                                        }
+                                        timerId = setTimeout(delayedFunction, 100);
+                                        break;
+                                    }
                                 }
                                 $("#xy-coord").text(text);
                             } else {
                                 $("#xy-coord").text("");
                             }
                         }
-                        
+
+                        const keyHandler = async function (event) {
+                            console.log(event);
+                        }
+
                         let mh = new OpenSeadragon.MouseTracker({"moveHandler": moveHandler, "element": "osd-view"});
+                        let kh = new OpenSeadragon.MouseTracker({"keyHandler": keyHandler, "element": "osd-view"});
 
                     </script>
                     <noscript>
