@@ -6,7 +6,7 @@
 <hibernate-configuration>
     <session-factory>
         <property name="connection.driver_class">com.mysql.jdbc.Driver</property>
-        <property name="connection.url">jdbc:mysql://atsccs1.cp.lsst.org:3306/atsccsdb?serverTimezone=UTC&amp;autoReconnect=true</property>
+        <property name="connection.url">jdbc:mysql://auxtel-mcm.cp.lsst.org:3306/atsccsdb?serverTimezone=UTC&amp;autoReconnect=true</property>
         <property name="hibernate.connection.password">lsst</property>
         <property name="hibernate.connection.username">ccs</property>
         <property name="dialect">org.hibernate.dialect.MySQLDialect</property>
