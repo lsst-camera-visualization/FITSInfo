@@ -233,7 +233,10 @@
                             srcRest: "openseadragon/images/home_rest.png",
                             srcDown: "openseadragon/images/home_pressed.png",
                             srcHover: "openseadragon/images/home_hover.png",
-                            srcGroup: "openseadragon/images/home_grouphover.png"
+                            srcGroup: "openseadragon/images/home_grouphover.png",
+                            onClick: function (e) {
+                                osd.viewport.goHome();
+                            }
                         });
 
 
@@ -241,7 +244,10 @@
                             srcRest: "openseadragon/images/zoomout_rest.png",
                             srcDown: "openseadragon/images/zoomout_pressed.png",
                             srcHover: "openseadragon/images/zoomout_hover.png",
-                            srcGroup: "openseadragon/images/zoomout_grouphover.png"
+                            srcGroup: "openseadragon/images/zoomout_grouphover.png",
+                            onClick: function (e) {
+                                osd.doSingleZoomOut();
+                            }
                         });
 
 
@@ -249,7 +255,10 @@
                             srcRest: "openseadragon/images/zoomin_rest.png",
                             srcDown: "openseadragon/images/zoomin_pressed.png",
                             srcHover: "openseadragon/images/zoomin_hover.png",
-                            srcGroup: "openseadragon/images/zoomin_grouphover.png"
+                            srcGroup: "openseadragon/images/zoomin_grouphover.png",
+                            onClick: function (e) {
+                                osd.doSingleZoomIn();
+                            }
                         });
 
 
@@ -257,7 +266,10 @@
                             srcRest: "openseadragon/images/fullpage_rest.png",
                             srcDown: "openseadragon/images/fullpage_pressed.png",
                             srcHover: "openseadragon/images/fullpage_hover.png",
-                            srcGroup: "openseadragon/images/fullpage_grouphover.png"
+                            srcGroup: "openseadragon/images/fullpage_grouphover.png",
+                            onClick: function (e) {
+                                osd.setFullScreen(!osd.isFullScreen());
+                            }
                         });
 
 
