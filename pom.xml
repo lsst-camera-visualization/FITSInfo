@@ -1,10 +1,51 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <parent>
+        <groupId>org.lsst</groupId>
+        <artifactId>org-lsst-ccs-parent</artifactId>
+        <version>3.0.17</version>
+    </parent>
+
+
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.lsst.fits</groupId>
     <artifactId>FITSInfo</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
+    
+    
+    <scm>
+        <url>https://github.com/lsst-camera-visualization/FITSInfo.git</url>
+        <connection>scm:git:git://github.com/lsst-camera-visualization/FITSInfo.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/lsst-camera-visualization/FITSInfo.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+    <distributionManagement>
+        <site>
+            <id>lsst-maven2-site</id>
+            <name>LSST Maven2 central site repository</name>
+            <url>dav:${org.lsst.ccs.site.url}</url>
+        </site>
+    </distributionManagement>
+
+    <properties>
+        <org.lsst.ccs.site.url>https://repo-nexus.lsst.org/nexus/content/sites/${org.lsst.ccs.site.name}/site-root/visualization/${project.artifactId}/${project.version}</org.lsst.ccs.site.url>
+        <org_lsst_ccs_project_type>visualization</org_lsst_ccs_project_type>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <jersey.version>2.31</jersey.version>
+    </properties>
+    
+    <repositories>
+        <repository>
+            <id>lsst-maven2-public</id>
+            <name>LSST Maven 2 central repository</name>
+            <url>https://repo-nexus.lsst.org/nexus/content/groups/ccs-maven2-public/</url>
+        </repository>
+    </repositories>
     
     <dependencyManagement>
         <dependencies>
@@ -102,10 +143,4 @@
         </plugins>    
     </build>
     
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <jersey.version>2.31</jersey.version>
-    </properties>
 </project>
