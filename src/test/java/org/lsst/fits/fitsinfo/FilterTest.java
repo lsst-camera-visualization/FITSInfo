@@ -2,9 +2,8 @@ package org.lsst.fits.fitsinfo;
 
 import java.util.Arrays;
 import java.util.List;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  *
@@ -16,21 +15,21 @@ public class FilterTest {
     public void testEmpty() {
         List<Object> input = Arrays.asList();
         Filter result = Filter.fromObjects(input);
-        assertNull(result);
+        Assert.assertNull(result);
     }
 
     @Test
     public void testBinary() {
         List<Object> input = Arrays.asList("field", "=", 3);
         Filter result = Filter.fromObjects(input);
-        assertTrue(result instanceof Filter.SimpleFilter);
+        Assert.assertTrue(result instanceof Filter.SimpleFilter);
     }
 
     @Test
     public void testUnary() {
         List<Object> input = Arrays.asList("!", Arrays.asList("field", "=", 3));
         Filter result = Filter.fromObjects(input);
-        assertTrue(result instanceof Filter.UnaryFilter);
+        Assert.assertTrue(result instanceof Filter.UnaryFilter);
     }
 
     @Test
@@ -44,7 +43,7 @@ public class FilterTest {
                         Arrays.asList("otherfield", ">", 11)
                 ));
         Filter result = Filter.fromObjects(input);
-        assertTrue(result instanceof Filter.ComplexFilter);
+        Assert.assertTrue(result instanceof Filter.ComplexFilter);
     }
 
     @Test
@@ -57,6 +56,6 @@ public class FilterTest {
                 Arrays.asList("runNumber", "=", "6476D")
         );
         Filter result = Filter.fromObjects(input);
-        assertTrue(result instanceof Filter.ComplexFilter);
+        Assert.assertTrue(result instanceof Filter.ComplexFilter);
     }
 }
