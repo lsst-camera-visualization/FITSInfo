@@ -24,6 +24,7 @@ public class EventSender {
         if ("auxtel".equalsIgnoreCase(siteName)) source =  Source.AuxTel;
         else if ("comcam".equalsIgnoreCase(siteName)) source =  Source.ComCam;
         else if ("main".equalsIgnoreCase(siteName)) source =  Source.MainCamera;
+        else if ("maincamera".equalsIgnoreCase(siteName)) source =  Source.MainCamera;
         else {
             source = Source.valueOf(siteName);
         }
