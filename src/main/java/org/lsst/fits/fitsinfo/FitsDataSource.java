@@ -99,5 +99,38 @@ public class FitsDataSource {
         result.put("next", dao.getNextImage(in));
         result.put("previous", dao.getPreviousImage(in));
         return result;
-    }
+    }   
+    
+    // TODO: Maybe this should come from cantaloupe??
+    @GET
+    @Path("/{site}/nodeMap/{id}")
+    public Map<String, Object> nodeMap(@PathParam(value = "site") String siteName, @PathParam(value = "id") String id) {
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        
+        String[][] nodes = { 
+            {"dc10", "dc06", "dc08", "dc09", "dc10"},
+            {"dc04", "dc01", "dc03", "dc05", "dc07"},
+            {"dc04", "dc07", "dc03", "dc09", "dc07"},
+            {"dc08", "dc05", "dc04", "dc09", "dc03"},
+            {"dc10", "dc08", "dc05", "dc06", "dc10"}
+        };
+        
+        for (int x=0; x<5; x++) {
+            for (int y=0; y<5; y++) {
+                String node = nodes[x][y];
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("url", String.format("https://lsst-camera.slac.stanford.edu/%s-iiif/2/", node));
+                data.put("x", x/5.0);
+                data.put("y", y/5.0);
+                data.put("width", 1/5.0);
+                data.put("xpixel", x*12000);
+                data.put("ypixel", y*12000);
+                data.put("raft", "R"+x+y);
+                result.put("R"+x+y, data);
+            }
+        }
+
+        return result;
+    }   
 }
