@@ -173,6 +173,7 @@
                             $("#runField").hide();
                         } else if (imageName.startsWith("MC_") && imageName.substring(5,9)>='2023') {
                             multi = true;
+                            raftName = "all";
                         }
                         let restURL = "rest/" + site + "/imageInfo/";
                         if (!raftName)
