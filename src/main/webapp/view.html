@@ -358,7 +358,6 @@
                                 eventSource = new EventSource("rest/" + site + "/notify");
 
                                 eventSource.addEventListener("newImage", function (event) {
-                                    console.log(event);
                                     imageName = event.lastEventId;
                                     let identifier = `${imageName}_${raftName}`;
                                     osd.open([`${iif2}${identifier}/info.json`]);
@@ -447,32 +446,34 @@
 
                                 //TODO: This should not be hardwired here
                                 if (multi) {
+                                    const xRaft = 12688;
+                                    const yRaft = 12686;
                                     this.multiGeom = {
                                         'R00': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
-                                        'R01': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: 12000, raft: 'R01'}, 
-                                        'R02': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: 24000, raft: 'R02'}, 
-                                        'R03': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: 36000, raft: 'R03'}, 
-                                        'R04': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: 48000, raft: 'R04'}, 
-                                        'R10': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: 12000, xpixel: 0, raft: 'R10'}, 
-                                        'R11': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: 12000, xpixel: 12000, raft: 'R11'}, 
-                                        'R12': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: 12000, xpixel: 24000, raft: 'R12'},
-                                        'R13': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: 12000, xpixel: 36000, raft: 'R13'}, 
-                                        'R14': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: 12000, xpixel: 48000, raft: 'R14'}, 
-                                        'R20': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: 24000, xpixel: 0, raft: 'R20'}, 
-                                        'R21': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: 24000, xpixel: 12000, raft: 'R21'}, 
-                                        'R22': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: 24000, xpixel: 24000, raft: 'R22'}, 
-                                        'R23': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: 24000, xpixel: 36000, raft: 'R23'}, 
-                                        'R24': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: 24000, xpixel: 48000, raft: 'R24'}, 
-                                        'R30': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: 36000, xpixel: 0, raft: 'R30'}, 
-                                        'R31': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: 36000, xpixel: 12000, raft: 'R31'}, 
-                                        'R32': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: 36000, xpixel: 24000, raft: 'R32'}, 
-                                        'R33': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: 36000, xpixel: 36000, raft: 'R33'}, 
-                                        'R34': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: 36000, xpixel: 48000, raft: 'R34'}, 
-                                        'R40': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: 48000, xpixel: 0, raft: 'R40'}, 
-                                        'R41': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: 48000, xpixel: 12000, raft: 'R41'}, 
-                                        'R42': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: 48000, xpixel: 24000, raft: 'R42'}, 
-                                        'R43': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: 48000, xpixel: 36000, raft: 'R43'}, 
-                                        'R44': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: 48000, xpixel: 48000, raft: 'R44'}
+                                        'R01': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
+                                        'R02': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
+                                        'R03': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
+                                        'R04': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
+                                        'R10': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
+                                        'R11': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
+                                        'R12': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
+                                        'R13': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
+                                        'R14': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
+                                        'R20': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
+                                        'R21': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
+                                        'R22': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
+                                        'R23': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
+                                        'R24': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
+                                        'R30': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
+                                        'R31': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
+                                        'R32': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
+                                        'R33': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
+                                        'R34': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
+                                        'R40': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
+                                        'R41': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
+                                        'R42': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
+                                        'R43': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
+                                        'R44': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
                                     };
                                 } 
                             }
@@ -480,13 +481,10 @@
                                 if (multi) {
                                     const re = /(MC_C_\d\d\d\d\d\d\d\d_\d\d\d\d\d\d)_(...)/;
                                     const image = images[0];
-                                    console.log("Opening "+image);
                                     const match = image.match(re);
-                                    console.log(match);
                                     this.geominfo = {};
                                     if (match) {
                                         const raft = match[2];
-                                        console.log(raft);
                                         if (raft === 'all') {
                                             let tiles = [];
                                             for (const key in this.multiGeom) {
@@ -498,18 +496,15 @@
                                                 d['x'] = region.x;
                                                 d['y'] = region.y;
                                                 d['width'] = region.width;
-                                                console.log(d);
                                                 tiles.push(d);
                                             }
                                             super.open(tiles);
                                             for (const tile of tiles) {
-                                                console.log(tile);
                                                 this.fetchGeomInfo(tile['geominfoSource'],tile['region'].raft);
                                             }
                                         } else {
                                             const tile = this.multiGeom[raft];
                                             const newImage = image.replace('https://lsst-camera.slac.stanford.edu/iiif/2', tile.url);
-                                            console.log(newImage);
                                             super.open(newImage);
                                             this.fetchGeomInfo(`${tile.url}${match[0]}/geominfo.json`, tile.raft);
                                         }
@@ -521,8 +516,6 @@
                             }
                             
                             fetchGeomInfo(url, raft) {
-                                console.log(url);
-                                console.log(raft);
                                 fetch(url)
                                     .then((response) => response.json())
                                     .then((myJson) => this.geominfo[raft] = myJson.geometry);
@@ -585,7 +578,7 @@
                                                 }
                                                 $("#xy-coord").text(text);                                            
                                             } else {
-                                                $("#xy-coord").text(text);
+                                                $("#xy-coord").text("");
                                             }
                                         }
                                     }
