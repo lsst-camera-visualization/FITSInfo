@@ -175,7 +175,7 @@
                             $("#runField").hide();
                         } else if (imageName.startsWith("MC_") && imageName.substring(5, 9) >= '2023') {
                             multi = true;
-                            raftName = "all";
+                            if (!raftName) raftName = "all";
                         }
                         let restURL = "rest/" + site + "/imageInfo/";
                         if (!raftName)
@@ -328,17 +328,6 @@
                             }
                         });
 
-                        //let overlayButton = new OpenSeadragon.Button({
-                        //    tooltip: "Toggle Overlays",
-                        //    srcRest: "openseadragon/images/button_rest.png",
-                        //    srcDown: "openseadragon/images/button_pressed.png",
-                        //    srcHover: "openseadragon/images/button_hover.png",
-                        //    srcGroup: "openseadragon/images/button_grouphover.png",
-                        //    onClick: function (e) {
-                        //        showOverlay = !showOverlay;
-                        //        showHideOverlays(showOverlay);
-                        //    }
-                        //});
                         $('#imageName').on("keypress", function (e) {
                             if (e.keyCode === 13) {
                                 imageName = $("#imageName").val();
@@ -382,7 +371,6 @@
                                 eventSource = new EventSource("rest/" + site + "/notify");
 
                                 eventSource.addEventListener("newImage", function (event) {
-                                    console.log(event);
                                     imageName = event.lastEventId;
                                     let identifier = `${imageName}_${raftName}`;
                                     osd.open([`${iif2}${identifier}/info.json`]);
@@ -415,10 +403,8 @@
                             queryParams.set("source", source);
                             history.replaceState(null, null, "?" + queryParams.toString());
                             fetch(`${restURL}${imageName}`)
-                                    .then(function (response) {
-                                        return response.json();
-                                    })
-                                    .then(function (myJson) {
+                                    .then((response) => response.json())
+                                    .then((myJson) => {
                                         imageInfo = myJson;
                                         let image = myJson.image;
                                         $("#run").val(image.runNumber);
@@ -447,18 +433,10 @@
                                             $("#raft").prepend(`<option ${selected}>all</option>`);
                                         }
                                     });
-                            geometry = [];
-                            fetch(`${iif2}${identifier}/geominfo.json`)
-                                    .then(function (response) {
-                                        return response.json();
-                                    })
-                                    .then(function (myJson) {
-                                        geometry = myJson.geometry;
-                                    });
                         };
 
                         class MyOpenSeadragon extends OpenSeadragon.Viewer {
-                            constructor() {
+                            constructor(multi) {
                                 super({
                                     id: "osd-view",
                                     prefixUrl: "openseadragon/images/",
@@ -474,147 +452,150 @@
                                     maxZoomPixelRatio: 2,
                                     crossOriginPolicy: true
                                 });
+                                this.multi = multi;
+                                this.geominfo = {};
 
-                                this.multi = {
-                                    'R00': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.0, width: 0.2, xpixel: 0, ypixel: 0, raft: 'R00'},
-                                    'R01': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.8, x: 0.2, width: 0.2, xpixel: 0, ypixel: 12000, raft: 'R01'},
-                                    'R02': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.8, x: 0.4, width: 0.2, xpixel: 0, ypixel: 24000, raft: 'R02'},
-                                    'R03': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.8, x: 0.6, width: 0.2, xpixel: 0, ypixel: 36000, raft: 'R03'},
-                                    'R04': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.8, width: 0.2, xpixel: 0, ypixel: 48000, raft: 'R04'},
-                                    'R10': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.6, x: 0.0, width: 0.2, xpixel: 12000, ypixel: 0, raft: 'R10'},
-                                    'R11': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.6, x: 0.2, width: 0.2, xpixel: 12000, ypixel: 12000, raft: 'R11'},
-                                    'R12': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.6, x: 0.4, width: 0.2, xpixel: 12000, ypixel: 24000, raft: 'R12'},
-                                    'R13': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.6, x: 0.6, width: 0.2, xpixel: 12000, ypixel: 36000, raft: 'R13'},
-                                    'R14': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.6, x: 0.8, width: 0.2, xpixel: 12000, ypixel: 48000, raft: 'R14'},
-                                    'R20': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.4, x: 0.0, width: 0.2, xpixel: 24000, ypixel: 0, raft: 'R20'},
-                                    'R21': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.2, width: 0.2, xpixel: 24000, ypixel: 12000, raft: 'R21'},
-                                    'R22': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.4, x: 0.4, width: 0.2, xpixel: 24000, ypixel: 24000, raft: 'R22'},
-                                    'R23': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.4, x: 0.6, width: 0.2, xpixel: 24000, ypixel: 36000, raft: 'R23'},
-                                    'R24': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.8, width: 0.2, xpixel: 24000, ypixel: 48000, raft: 'R24'},
-                                    'R30': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.2, x: 0.0, width: 0.2, xpixel: 36000, ypixel: 0, raft: 'R30'},
-                                    'R31': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.2, x: 0.2, width: 0.2, xpixel: 36000, ypixel: 12000, raft: 'R31'},
-                                    'R32': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.2, x: 0.4, width: 0.2, xpixel: 36000, ypixel: 24000, raft: 'R32'},
-                                    'R33': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.2, x: 0.6, width: 0.2, xpixel: 36000, ypixel: 36000, raft: 'R33'},
-                                    'R34': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.2, x: 0.8, width: 0.2, xpixel: 36000, ypixel: 48000, raft: 'R34'},
-                                    'R40': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.0, width: 0.2, xpixel: 48000, ypixel: 0, raft: 'R40'},
-                                    'R41': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.0, x: 0.2, width: 0.2, xpixel: 48000, ypixel: 12000, raft: 'R41'},
-                                    'R42': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.0, x: 0.4, width: 0.2, xpixel: 48000, ypixel: 24000, raft: 'R42'},
-                                    'R43': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.0, x: 0.6, width: 0.2, xpixel: 48000, ypixel: 36000, raft: 'R43'},
-                                    'R44': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.8, width: 0.2, xpixel: 48000, ypixel: 48000, raft: 'R44'}
-                                };
+                                //TODO: This should not be hardwired here
+                                if (multi) {
+                                    const xRaft = 12688;
+                                    const yRaft = 12686;
+                                    this.multiGeom = {
+                                        'R00': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
+                                        'R01': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
+                                        'R02': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
+                                        'R03': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
+                                        'R04': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
+                                        'R10': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
+                                        'R11': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
+                                        'R12': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
+                                        'R13': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
+                                        'R14': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
+                                        'R20': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
+                                        'R21': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
+                                        'R22': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
+                                        'R23': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
+                                        'R24': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
+                                        'R30': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
+                                        'R31': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
+                                        'R32': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
+                                        'R33': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
+                                        'R34': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
+                                        'R40': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
+                                        'R41': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
+                                        'R42': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
+                                        'R43': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
+                                        'R44': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
+                                    };
+                                } 
                             }
                             open(images) {
-                                const re = /(MC_C_\d\d\d\d\d\d\d\d_\d\d\d\d\d\d)_(...)/;
-                                const image = images[0];
-                                console.log("Opening " + image);
-                                const match = image.match(re);
-                                console.log(match);
-                                if (match) {
-                                    const raft = match[2];
-                                    console.log(raft);
-                                    if (raft === 'all') {
-                                        let tiles = [];
-                                        for (const key in this.multi) {
-                                            let region = this.multi[key];
-                                            var d = {};
-                                            d['tileSource'] = `${region.url}${identifier.replace('_all', '_' + region.raft)}/info.json`;
-                                            d['x'] = region.x;
-                                            d['y'] = region.y;
-                                            d['width'] = region.width;
-                                            console.log(d);
-                                            tiles.push(d);
+                                if (multi) {
+                                    const re = /(MC_C_\d\d\d\d\d\d\d\d_\d\d\d\d\d\d)_(...)/;
+                                    const image = images[0];
+                                    const match = image.match(re);
+                                    this.geominfo = {};
+                                    if (match) {
+                                        const raft = match[2];
+                                        if (raft === 'all') {
+                                            let tiles = [];
+                                            for (const key in this.multiGeom) {
+                                                let region = this.multiGeom[key];
+                                                let d = {};
+                                                d['tileSource'] = `${region.url}${identifier.replace('_all','_'+region.raft)}/info.json`;
+                                                d['geominfoSource'] = `${region.url}${identifier.replace('_all','_'+region.raft)}/geominfo.json`;
+                                                d['region'] = region;
+                                                d['x'] = region.x;
+                                                d['y'] = region.y;
+                                                d['width'] = region.width;
+                                                tiles.push(d);
+                                            }
+                                            super.open(tiles);
+                                            for (const tile of tiles) {
+                                                this.fetchGeomInfo(tile['geominfoSource'],tile['region'].raft);
+                                            }
+                                        } else {
+                                            const tile = this.multiGeom[raft];
+                                            const newImage = image.replace('https://lsst-camera.slac.stanford.edu/iiif/2', tile.url);
+                                            super.open(newImage);
+                                            this.fetchGeomInfo(`${tile.url}${match[0]}/geominfo.json`, tile.raft);
                                         }
-                                        super.open(tiles);
-                                    } else {
-                                        const tile = this.multi[raft];
-                                        const newImage = image.replace('https://lsst-camera.slac.stanford.edu/iiif/2', tile.url);
-                                        console.log(newImage);
-                                        super.open(newImage);
                                     }
+                                } else {
+                                    super.open(images);
+                                    this.fetchGeomInfo(`${iif2}${identifier}/geominfo.json`, 'all');
                                 }
                             }
-
-                        }
-
-                        var osd;
-                        var screenshotInstance;
-                        if (multi) {
-                            osd = new MyOpenSeadragon();
-                            osd.open([`${iif2}${identifier}/info.json`]);
-                            //openHandler();
-                            //fetch(`http://localhost:8080/FITSInfo/rest/maincamera/nodeMap/xxx`)
-                            //        .then(function (response) {
-                            //            return response.json();
-                            //        })
-                            //        .then(function (myJson) {
-                            //            for (const key in myJson) {
-                            //                let region = myJson[key];
-                            //                var d = {};
-                            //                d['tileSource'] = `${region.url}${identifier.replace('_all','_'+region.raft)}/info.json`;
-                            //                d['x'] = region.x;
-                            //                d['y'] = region.y;
-                            //                d['width'] = region.width;
-                            //                console.log(d);
-                            //                osd.addTiledImage(d);                                               
-                            //            }
-                            //        });
-                            //openHandler();
-                        } else {
-                            osd = OpenSeadragon({
-                                id: "osd-view",
-                                prefixUrl: "openseadragon/images/",
-                                sequenceMode: false,
-                                showNavigator: true,
-                                tileSources: [
-                                    `${iif2}${identifier}/info.json`
-                                ],
-                                toolbar: "toolbarDiv",
-                                homeButton: homeButton.element,
-                                fullPageButton: fullPageButton.element,
-                                zoomInButton: zoomInButton.element,
-                                zoomOutButton: zoomOutButton.element,
-                                preserveOverlays: true,
-                                preserveViewport: true,
-                                maxZoomPixelRatio: 2
-                            });
-                        }
-                        screenshotInstance = osd.screenshot({
-                            showOptions: true, // Default is false
-                            keyboardShortcut: 'p', // Default is null
-                            showScreenshotControl: true // Default is true
-                        });
-                        // Get rid of mystery div created by the code above, else toolbar messed up.
-                        $('#toolbarDiv').children().last().remove();
-
-
-                        osd.addHandler('open', openHandler);
-
-                        class AffineTransform {
-                            constructor(flatmatrix) {
-                                this.m00 = flatmatrix[0];
-                                this.m10 = flatmatrix[1];
-                                this.m01 = flatmatrix[2];
-                                this.m11 = flatmatrix[3];
-                                this.m02 = flatmatrix[4];
-                                this.m12 = flatmatrix[5];
+                            
+                            fetchGeomInfo(url, raft) {
+                                fetch(url)
+                                    .then((response) => response.json())
+                                    .then((myJson) => this.geominfo[raft] = myJson.geometry);
                             }
+                            
+                            moveHandler(event) {
+                                if (multi) {
+                                    const mousePoint = new OpenSeadragon.Point(event.position.x, event.position.y);
+                                    var webPoint = event.position;
+                                    var viewportPoint = osd.viewport.pointFromPixel(webPoint);
 
-                            transform(x, y) {
-                                return [x * this.m00 + y * this.m01 + this.m02,
-                                    x * this.m10 + y * this.m11 + this.m12];
-                            }
-                        }
-
-                        const moveHandler = async function (event) {
-                            const mousePoint = new OpenSeadragon.Point(event.position.x, event.position.y);
-                            var webPoint = event.position;
-                            var viewportPoint = osd.viewport.pointFromPixel(webPoint);
-
-                            for (var i = 0; i < osd.world.getItemCount(); i++)
-                            {
-                                const tiledImage = osd.world.getItemAt(i);
-                                var rect = tiledImage.getBounds(true); // rect in viewport coordinates
-                                if (rect.containsPoint(viewportPoint)) {
+                                    for (var i=0; i<osd.world.getItemCount(); i++) {
+                                        const tiledImage = osd.world.getItemAt(i);
+                                        var rect = tiledImage.getBounds(true); // rect in viewport coordinates
+                                        if (rect.containsPoint(viewportPoint)) {
+                                            const realHoverPosition = tiledImage.viewerElementToImageCoordinates(mousePoint);
+                                            // size of the main image
+                                            const realSize = tiledImage.getContentSize();
+                                            //console.log("Move "+mousePoint+" "+tiledImage+" "+realHoverPosition+" "+realSize);
+                                            const offHorizontally = realHoverPosition.x < 0 || realHoverPosition.x > realSize.x;
+                                            const offVertically = realHoverPosition.y < 0 || realHoverPosition.y > realSize.y;
+                                            const isHovering = !offHorizontally && !offVertically;
+                                            if (isHovering) {
+                                                let x = Math.floor(realHoverPosition.x);
+                                                let y = Math.floor(realSize.y - realHoverPosition.y);
+                                                let url = tiledImage.source.getTileUrl(0,0,0);
+                                                let re = /.*\d\d\d\d\d\d_(R..).*/;
+                                                let match = re.exec(url);
+                                                let raft = match[1];
+                                                let region = this.multiGeom[raft];
+                                                let geometry = this.geominfo[raft];
+                                                let text = `x: ${x+region.xpixel}, y: ${y+region.ypixel}`
+                                                //console.log(geometry);
+                                                let name = '';
+                                                let xx = 0;
+                                                let yy = 0;
+                                                for (const g of geometry) {
+                                                    if ((x >= g.x && x < g.x + g.width) && (y >= g.y && y < g.y + g.height)) {
+                                                        name = g.raftBay + "/" + g.ccdSlot + "/" + g.segmentName;
+                                                        let at = new AffineTransform(g.flatmatrix);
+                                                        let xy = at.transform(x, y);
+                                                        xx = Math.round(xy[0]);
+                                                        yy = Math.round(xy[1]);
+                                                        text += `, ${name}(${xx}, ${yy})`;
+                                                        let delayedFunction = () => {
+                                                            fetch(`${region.url}${identifier.replace('_all','_'+region.raft)}/${x},${y}/pixel.json`)
+                                                                .then((response) => response.json())
+                                                                .then((myJson) => {
+                                                                    if (myJson.x == x && myJson.y == y) {
+                                                                        $("#xy-coord").text(text + ": " +myJson.pixel);
+                                                                    }
+                                                                });
+                                                        };
+                                                        if (timerId) {
+                                                            clearTimeout(timerId);
+                                                        }
+                                                        timerId = setTimeout(delayedFunction, 100);
+                                                        break;
+                                                    }
+                                                }
+                                                $("#xy-coord").text(text);                                            
+                                            } else {
+                                                $("#xy-coord").text("");
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    const mousePoint = new OpenSeadragon.Point(event.position.x, event.position.y);
+                                    const tiledImage = osd.world.getItemAt(0);
                                     const realHoverPosition = tiledImage.viewerElementToImageCoordinates(mousePoint);
                                     // size of the main image
                                     const realSize = tiledImage.getContentSize();
@@ -626,6 +607,7 @@
                                         let x = Math.floor(realHoverPosition.x);
                                         let y = Math.floor(realSize.y - realHoverPosition.y);
                                         let text = `x: ${x}, y: ${y}`;
+                                        let geometry = this.geominfo['all'];
                                         for (const g of geometry) {
                                             if ((x >= g.x && x < g.x + g.width) && (y >= g.y && y < g.y + g.height)) {
                                                 let name = g.raftBay + "/" + g.ccdSlot + "/" + g.segmentName;
@@ -636,10 +618,7 @@
                                                 text += `, ${name}(${xx}, ${yy})`;
                                                 // We want to delay the pixel value fetch unless mouse held in a fixed position
                                                 // for a certain time (100ms)
-                                                // tiledImage.source.getTileURL(level,x,y)
-                                                // https://openseadragon.github.io/docs/openseadragon.js.html#line13236
-                                                let delayedFunction = function () {
-                                                    // ToDo: if using multi we need to ask the right server for the coords
+                                                let delayedFunction = function() {
                                                     fetch(`${iif2}${identifier}/${x},${y}/pixel.json`)
                                                             .then(function (response) {
                                                                 return response.json();
@@ -660,9 +639,41 @@
                                         $("#xy-coord").text(text);
                                     } else {
                                         $("#xy-coord").text("");
-                                    }
+                                    }                                    
                                 }
                             }
+                        }
+
+                        const osd = new MyOpenSeadragon(multi);
+                        osd.open([`${iif2}${identifier}/info.json`]);
+                        const screenshotInstance = osd.screenshot({
+                            showOptions: true, // Default is false
+                            keyboardShortcut: 'p', // Default is null
+                            showScreenshotControl: true // Default is true
+                        });
+                        // Get rid of mystery div created by the code above, else toolbar messed up.
+                        $('#toolbarDiv').children().last().remove();
+                        
+                        osd.addHandler('open', openHandler);
+
+                        class AffineTransform {
+                            constructor(flatmatrix) {
+                                this.m00 = flatmatrix[0];
+                                this.m10 = flatmatrix[1];
+                                this.m01 = flatmatrix[2];
+                                this.m11 = flatmatrix[3];
+                                this.m02 = flatmatrix[4];
+                                this.m12 = flatmatrix[5];
+                            }
+
+                            transform(x, y) {
+                                return [x * this.m00 + y * this.m01 + this.m02,
+                                    x * this.m10 + y * this.m11 + this.m12];
+                            }
+                        }
+
+                        const moveHandler = async function (event) {
+                            osd.moveHandler(event);
                         };
 
                         const keyHandler = async function (event) {
