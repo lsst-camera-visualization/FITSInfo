@@ -143,7 +143,6 @@
                 <div id="osd-view" class="openseadragon content box">
                     <script type="text/javascript">
                         'use strict';
-                        let multi = false;
                         let iif2 = "https://lsst-camera.slac.stanford.edu/iiif/2/";
                         let geometry = [];
                         let urlParams = new URLSearchParams(window.location.search);
@@ -173,8 +172,7 @@
                             raftName = "R22";
                             site = "comcam";
                             $("#runField").hide();
-                        } else if (imageName.startsWith("MC_") && imageName.substring(5, 9) >= '2023') {
-                            multi = true;
+                        } else if (imageName.startsWith("MC_")) {
                             if (!raftName) raftName = "all";
                         }
                         let restURL = "rest/" + site + "/imageInfo/";
@@ -198,50 +196,16 @@
                         scales.forEach(scale => $("#scale").append(`<option name="${scale}">${scale}</option>`));
                         if (imageName === "latest") {
                             fetch(`${restURL}latest`)
-                                    .then(function (response) {
-                                        return response.json();
-                                    })
-                                    .then(function (myJson) {
-                                        imageName = myJson.image.obsId;
-                                        let identifier = `${imageName}_${raftName}\$color=${colorMap}`;
-                                        osd.open([`${iif2}${identifier}/info.json`]);
-                                        $('#showLatest').prop('checked', true);
-                                        $("#showLatest").trigger("change");
-                                    });
+                                .then((response) => response.json())
+                                .then((myJson) => {
+                                    imageName = myJson.image.obsId;
+                                    osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
+                                    $('#showLatest').prop('checked', true);
+                                    $("#showLatest").trigger("change");
+                                });
                         }
-                        let identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
                         let imageInfo = null;
-                        let showOverlay = false;
                         let eventSource = null;
-                        function showHideOverlays(show) {
-                            if (show) {
-                                for (let x = 0; x < 3; x++) {
-                                    for (let y = 0; y < 3; y++) {
-                                        let elt = document.createElement("div");
-                                        elt.className = "overlay-sensor";
-                                        elt.innerHTML = `S${2 - y}${x}`;
-                                        osd.addOverlay({element: elt, location: new OpenSeadragon.Point(.167 + x * .333, 0.35 + (y - 1) * .333), placement: OpenSeadragon.Placement.TOP});
-                                        for (let i = 0; i < 8; i++) {
-                                            let elt = document.createElement("div");
-                                            elt.className = "overlay-segment";
-                                            elt.innerHTML = `Sg${(i + 10).toLocaleString("en-us", {minimumIntegerDigits: 2})}`;
-                                            osd.addOverlay({element: elt, location: new OpenSeadragon.Point(.028 + i * .04 + x * .333, 0.4980 + (y - 1) * .333), placement: OpenSeadragon.Placement.BOTTOM});
-                                        }
-                                        for (let i = 0; i < 8; i++) {
-                                            let elt = document.createElement("div");
-                                            elt.className = "overlay-segment";
-                                            elt.innerHTML = `Sg${i.toLocaleString("en-us", {minimumIntegerDigits: 2})}`;
-                                            osd.addOverlay({element: elt, location: new OpenSeadragon.Point(.028 + i * .04 + x * .333, 0.5020 + (y - 1) * .333), placement: OpenSeadragon.Placement.TOP});
-                                        }
-                                    }
-                                }
-                            } else {
-                                osd.clearOverlays();
-                            }
-                        }
-                        function computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source) {
-                            return `${imageName}_${raftName}\$colorMap=${colorMap}\$biasCorrection=${bias}\$scale=${scale}\$source=${source}`;
-                        }
 
                         let homeButton = new OpenSeadragon.Button({
                             srcRest: "openseadragon/images/home_rest.png",
@@ -296,8 +260,7 @@
                             onClick: function (e) {
                                 if (!e.eventSource.element.disabled) {
                                     imageName = imageInfo.previous;
-                                    identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
-                                    osd.open([`${iif2}${identifier}/info.json`]);
+                                    osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
                                 }
                             }
                         });
@@ -311,8 +274,7 @@
                             onClick: function (e) {
                                 if (!e.eventSource.element.disabled) {
                                     imageName = imageInfo.next;
-                                    identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
-                                    osd.open([`${iif2}${identifier}/info.json`]);
+                                    osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
                                 }
                             }
                         });
@@ -331,49 +293,36 @@
                         $('#imageName').on("keypress", function (e) {
                             if (e.keyCode === 13) {
                                 imageName = $("#imageName").val();
-                                identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
-                                osd.open([`${iif2}${identifier}/info.json`]);
+                                osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
                             }
                         });
                         $('#raft').on("change", function (e) {
                             raftName = $("#raft").val();
-                            identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
-                            osd.open([`${iif2}${identifier}/info.json`]);
-
+                            osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
                         });
                         $('#color').on("change", function (e) {
                             colorMap = $("#color").val();
-                            identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
-                            osd.open([`${iif2}${identifier}/info.json`]);
-
+                            osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
                         });
                         $('#source').on("change", function (e) {
                             source = $("#source").val();
-                            identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
-                            osd.open([`${iif2}${identifier}/info.json`]);
-
+                            osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
                         });
                         $('#bias').on("change", function (e) {
                             bias = $("#bias").val();
-                            identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
-                            osd.open([`${iif2}${identifier}/info.json`]);
-
+                            osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
                         });
                         $('#scale').on("change", function (e) {
                             scale = $("#scale").val();
-                            identifier = computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
-                            osd.open([`${iif2}${identifier}/info.json`]);
-
+                            osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
                         });
-                        $('#showLatest').on("change", function (e) {
+                        $('#showLatest').on("change", (e) => {
                             const checked = $('#showLatest').is(":checked");
                             if (checked) {
                                 eventSource = new EventSource("rest/" + site + "/notify");
-
-                                eventSource.addEventListener("newImage", function (event) {
+                                eventSource.addEventListener("newImage", (event) => {
                                     imageName = event.lastEventId;
-                                    let identifier = `${imageName}_${raftName}`;
-                                    osd.open([`${iif2}${identifier}/info.json`]);
+                                    osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
                                 });
                             } else {
                                 eventSource.close();
@@ -403,40 +352,40 @@
                             queryParams.set("source", source);
                             history.replaceState(null, null, "?" + queryParams.toString());
                             fetch(`${restURL}${imageName}`)
-                                    .then((response) => response.json())
-                                    .then((myJson) => {
-                                        imageInfo = myJson;
-                                        let image = myJson.image;
-                                        $("#run").val(image.runNumber);
-                                        $("#imageType").val(image.imgType);
-                                        $("#testType").val(image.testType);
-                                        $("#exposureTime").val(image.exposureTime);
-                                        $("#darkTime").val(image.darkTime);
-                                        $("#time").val(new Date(image.obsDate).toISOString().slice(0, 19));
-                                        $("#raft").empty();
-                                        if (imageInfo.previous)
-                                            prevButton.enable();
-                                        if (imageInfo.next)
-                                            nextButton.enable();
-                                        let n = 0;
-                                        for (let i = 0; i < 25; i++) {
-                                            let raft = image.raftMask >> i & 1;
-                                            if (raft) {
-                                                let newRaft = "R" + Math.floor(i / 5) + (i % 5);
-                                                let selected = raftName === newRaft ? "selected" : "";
-                                                $("#raft").append(`<option ${selected}>${newRaft}</option>`);
-                                                n++;
-                                            }
+                                .then((response) => response.json())
+                                .then((myJson) => {
+                                    imageInfo = myJson;
+                                    let image = myJson.image;
+                                    $("#run").val(image.runNumber);
+                                    $("#imageType").val(image.imgType);
+                                    $("#testType").val(image.testType);
+                                    $("#exposureTime").val(image.exposureTime);
+                                    $("#darkTime").val(image.darkTime);
+                                    $("#time").val(new Date(image.obsDate).toISOString().slice(0, 19));
+                                    $("#raft").empty();
+                                    if (imageInfo.previous)
+                                        prevButton.enable();
+                                    if (imageInfo.next)
+                                        nextButton.enable();
+                                    let n = 0;
+                                    for (let i = 0; i < 25; i++) {
+                                        let raft = image.raftMask >> i & 1;
+                                        if (raft) {
+                                            let newRaft = "R" + Math.floor(i / 5) + (i % 5);
+                                            let selected = raftName === newRaft ? "selected" : "";
+                                            $("#raft").append(`<option ${selected}>${newRaft}</option>`);
+                                            n++;
                                         }
-                                        if (n > 2) {
-                                            let selected = raftName === 'all' ? "selected" : "";
-                                            $("#raft").prepend(`<option ${selected}>all</option>`);
-                                        }
-                                    });
+                                    }
+                                    if (n > 2) {
+                                        let selected = raftName === 'all' ? "selected" : "";
+                                        $("#raft").prepend(`<option ${selected}>all</option>`);
+                                    }
+                                });
                         };
 
                         class MyOpenSeadragon extends OpenSeadragon.Viewer {
-                            constructor(multi) {
+                            constructor() {
                                 super({
                                     id: "osd-view",
                                     prefixUrl: "openseadragon/images/",
@@ -452,44 +401,53 @@
                                     maxZoomPixelRatio: 2,
                                     crossOriginPolicy: true
                                 });
-                                this.multi = multi;
+                                this.multi = false;
                                 this.geominfo = {};
+                                this.identifier = null;
 
                                 //TODO: This should not be hardwired here
-                                if (multi) {
-                                    const xRaft = 12688;
-                                    const yRaft = 12686;
-                                    this.multiGeom = {
-                                        'R00': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
-                                        'R01': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
-                                        'R02': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
-                                        'R03': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
-                                        'R04': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
-                                        'R10': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
-                                        'R11': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
-                                        'R12': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
-                                        'R13': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
-                                        'R14': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
-                                        'R20': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
-                                        'R21': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
-                                        'R22': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
-                                        'R23': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
-                                        'R24': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
-                                        'R30': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
-                                        'R31': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
-                                        'R32': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
-                                        'R33': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
-                                        'R34': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
-                                        'R40': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
-                                        'R41': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
-                                        'R42': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
-                                        'R43': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
-                                        'R44': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
-                                    };
-                                } 
+                                const xRaft = 12688;
+                                const yRaft = 12686;
+                                this.multiGeom = {
+                                    'R00': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
+                                    'R01': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
+                                    'R02': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
+                                    'R03': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
+                                    'R04': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
+                                    'R10': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
+                                    'R11': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
+                                    'R12': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
+                                    'R13': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
+                                    'R14': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
+                                    'R20': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
+                                    'R21': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
+                                    'R22': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
+                                    'R23': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
+                                    'R24': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
+                                    'R30': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
+                                    'R31': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
+                                    'R32': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
+                                    'R33': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
+                                    'R34': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
+                                    'R40': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
+                                    'R41': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
+                                    'R42': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
+                                    'R43': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
+                                    'R44': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
+                                };                     
                             }
+                            computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source) {
+                                return `${imageName}_${raftName}\$colorMap=${colorMap}\$biasCorrection=${bias}\$scale=${scale}\$source=${source}`;
+                            }
+                            
+                            openIdentifier(imageName, raftName, colorMap, bias, scale, source) {
+                                this.multi = imageName.startsWith("MC_") && imageName.substring(5, 9) >= '2023';
+                                this.identifier = this.computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
+                                this.open([`${iif2}${this.identifier}/info.json`]);                                
+                            }                         
+                            
                             open(images) {
-                                if (multi) {
+                                if (this.multi) {
                                     const re = /(MC_C_\d\d\d\d\d\d\d\d_\d\d\d\d\d\d)_(...)/;
                                     const image = images[0];
                                     const match = image.match(re);
@@ -500,14 +458,14 @@
                                             let tiles = [];
                                             for (const key in this.multiGeom) {
                                                 let region = this.multiGeom[key];
-                                                let d = {};
-                                                d['tileSource'] = `${region.url}${identifier.replace('_all','_'+region.raft)}/info.json`;
-                                                d['geominfoSource'] = `${region.url}${identifier.replace('_all','_'+region.raft)}/geominfo.json`;
-                                                d['region'] = region;
-                                                d['x'] = region.x;
-                                                d['y'] = region.y;
-                                                d['width'] = region.width;
-                                                tiles.push(d);
+                                                let tile = {};
+                                                tile['tileSource'] = `${region.url}${this.identifier.replace('_all','_'+region.raft)}/info.json`;
+                                                tile['geominfoSource'] = `${region.url}${this.identifier.replace('_all','_'+region.raft)}/geominfo.json`;
+                                                tile['region'] = region;
+                                                tile['x'] = region.x;
+                                                tile['y'] = region.y;
+                                                tile['width'] = region.width;
+                                                tiles.push(tile);
                                             }
                                             super.open(tiles);
                                             for (const tile of tiles) {
@@ -522,7 +480,7 @@
                                     }
                                 } else {
                                     super.open(images);
-                                    this.fetchGeomInfo(`${iif2}${identifier}/geominfo.json`, 'all');
+                                    this.fetchGeomInfo(`${iif2}${this.identifier}/geominfo.json`, 'all');
                                 }
                             }
                             
@@ -533,7 +491,7 @@
                             }
                             
                             moveHandler(event) {
-                                if (multi) {
+                                if (this.multi) {
                                     const mousePoint = new OpenSeadragon.Point(event.position.x, event.position.y);
                                     var webPoint = event.position;
                                     var viewportPoint = osd.viewport.pointFromPixel(webPoint);
@@ -572,7 +530,7 @@
                                                         yy = Math.round(xy[1]);
                                                         text += `, ${name}(${xx}, ${yy})`;
                                                         let delayedFunction = () => {
-                                                            fetch(`${region.url}${identifier.replace('_all','_'+region.raft)}/${x},${y}/pixel.json`)
+                                                            fetch(`${region.url}${this.identifier.replace('_all','_'+region.raft)}/${x},${y}/pixel.json`)
                                                                 .then((response) => response.json())
                                                                 .then((myJson) => {
                                                                     if (myJson.x == x && myJson.y == y) {
@@ -619,7 +577,7 @@
                                                 // We want to delay the pixel value fetch unless mouse held in a fixed position
                                                 // for a certain time (100ms)
                                                 let delayedFunction = function() {
-                                                    fetch(`${iif2}${identifier}/${x},${y}/pixel.json`)
+                                                    fetch(`${iif2}${this.identifier}/${x},${y}/pixel.json`)
                                                             .then(function (response) {
                                                                 return response.json();
                                                             })
@@ -644,8 +602,10 @@
                             }
                         }
 
-                        const osd = new MyOpenSeadragon(multi);
-                        osd.open([`${iif2}${identifier}/info.json`]);
+                        const osd = new MyOpenSeadragon();
+                        if (imageName !== 'latest') {
+                            osd.openIdentifier(imageName, raftName, colorMap, bias, scale, source);
+                        }
                         const screenshotInstance = osd.screenshot({
                             showOptions: true, // Default is false
                             keyboardShortcut: 'p', // Default is null
