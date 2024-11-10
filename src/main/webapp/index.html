@@ -17,13 +17,15 @@
             $(function () {
                 let urlParams = new URLSearchParams(window.location.search);
                 let serverName = window.location.hostname;
+                console.log(serverName);
                 let host = serverName.indexOf("lsst.org")>=0 ? "chile" : serverName.indexOf("slac.stanford.edu")>=0 ? "slac" : "other";
                 let dataSources = ["Main Camera", "ComCam", "AuxTel", "TS8", "ComCam Tucson"];
-                if (host == 'slac') {
-                    dataSources = ["Main Camera", "TS8"];
-                } else if (host == 'chile') {
-                    dataSources = ["ComCam", "AuxTel"];
+                if (host === 'slac') {
+                    dataSources = ["TS8"];
+                } else if (host === 'chile') {
+                    dataSources = ["Main Camera", "ComCam", "AuxTel"];
                 }
+                console.log(dataSources);
                 let view = urlParams.get('view');
                 if (isNotEmpty(view)) {
                     let site = view.toLowerCase();
@@ -91,7 +93,7 @@
                         dataGrid.columnOption("runMode", "groupIndex", 0);
                         dataGrid.columnOption("run", "visible", true);
                         dataGrid.columnOption("runMode", "visible", true);
-                        site = "maincamera";
+                        site = "lsstcam";
                     } else if (view == "TS8") { // TS8
                         dataGrid.filter(["telCode", "=", "TS"]);
                         dataGrid.columnOption("dayobs", "visible", false);

@@ -143,7 +143,7 @@
                 <div id="osd-view" class="openseadragon content box">
                     <script type="text/javascript">
                         'use strict';
-                        let iif2 = "https://lsst-camera.slac.stanford.edu/iiif/2/";
+                        let iif2 = "s";
                         let geometry = [];
                         let urlParams = new URLSearchParams(window.location.search);
                         let imageName = urlParams.get('image');
@@ -174,8 +174,12 @@
                             $("#runField").hide();
                         } else if (imageName.startsWith("MC_")) {
                             if (!raftName) raftName = "all";
+                            site = "lsstcam";
+                            iif2 = "http://lsstcam-vs01.cp.lsst.org:8182/iiif/2/";
                         }
                         let restURL = "rest/" + site + "/imageInfo/";
+                        console.log("restURL="+restURL);
+                        console.log("iif2="+restURL);
                         if (!raftName)
                             raftName = "R22";
                         let colorMaps = ["grey", "a", "b", "bb", "cubehelix0", "cubehelix1", "rainbow", "standard"];
@@ -351,6 +355,7 @@
                             queryParams.set("scale", scale);
                             queryParams.set("source", source);
                             history.replaceState(null, null, "?" + queryParams.toString());
+                            console.log("Fetch"+`${restURL}${imageName}`);
                             fetch(`${restURL}${imageName}`)
                                 .then((response) => response.json())
                                 .then((myJson) => {
@@ -409,32 +414,32 @@
                                 const xRaft = 12688;
                                 const yRaft = 12686;
                                 this.multiGeom = {
-                                    'R00': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
-                                    'R01': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
-                                    'R02': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
-                                    'R03': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
-                                    'R04': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
-                                    'R10': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
-                                    'R11': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
-                                    'R12': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
-                                    'R13': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
-                                    'R14': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
-                                    'R20': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
-                                    'R21': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
-                                    'R22': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
-                                    'R23': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
-                                    'R24': {'url': 'https://lsst-camera.slac.stanford.edu/dc07-iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
-                                    'R30': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
-                                    'R31': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
-                                    'R32': {'url': 'https://lsst-camera.slac.stanford.edu/dc04-iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
-                                    'R33': {'url': 'https://lsst-camera.slac.stanford.edu/dc09-iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
-                                    'R34': {'url': 'https://lsst-camera.slac.stanford.edu/dc03-iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
-                                    'R40': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
-                                    'R41': {'url': 'https://lsst-camera.slac.stanford.edu/dc08-iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
-                                    'R42': {'url': 'https://lsst-camera.slac.stanford.edu/dc05-iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
-                                    'R43': {'url': 'https://lsst-camera.slac.stanford.edu/dc06-iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
-                                    'R44': {'url': 'https://lsst-camera.slac.stanford.edu/dc10-iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
-                                };                     
+                                    'R00': {'url': 'http://lsstcam-dc10.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
+                                    'R01': {'url': 'http://lsstcam-dc06.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
+                                    'R02': {'url': 'http://lsstcam-dc08.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
+                                    'R03': {'url': 'http://lsstcam-dc09.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
+                                    'R04': {'url': 'http://lsstcam-dc10.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
+                                    'R10': {'url': 'http://lsstcam-dc04.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
+                                    'R11': {'url': 'http://lsstcam-dc06.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
+                                    'R12': {'url': 'http://lsstcam-dc03.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
+                                    'R13': {'url': 'http://lsstcam-dc05.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
+                                    'R14': {'url': 'http://lsstcam-dc07.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
+                                    'R20': {'url': 'http://lsstcam-dc04.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
+                                    'R21': {'url': 'http://lsstcam-dc07.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
+                                    'R22': {'url': 'http://lsstcam-dc03.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
+                                    'R23': {'url': 'http://lsstcam-dc09.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
+                                    'R24': {'url': 'http://lsstcam-dc07.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
+                                    'R30': {'url': 'http://lsstcam-dc08.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
+                                    'R31': {'url': 'http://lsstcam-dc05.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
+                                    'R32': {'url': 'http://lsstcam-dc04.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
+                                    'R33': {'url': 'http://lsstcam-dc09.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
+                                    'R34': {'url': 'http://lsstcam-dc03.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
+                                    'R40': {'url': 'http://lsstcam-dc10.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
+                                    'R41': {'url': 'http://lsstcam-dc08.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
+                                    'R42': {'url': 'http://lsstcam-dc05.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
+                                    'R43': {'url': 'http://lsstcam-dc06.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
+                                    'R44': {'url': 'http://lsstcam-dc10.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
+                                };                    
                             }
                             computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source) {
                                 return `${imageName}_${raftName}\$colorMap=${colorMap}\$biasCorrection=${bias}\$scale=${scale}\$source=${source}`;
@@ -443,12 +448,15 @@
                             openIdentifier(imageName, raftName, colorMap, bias, scale, source) {
                                 this.multi = imageName.startsWith("MC_") && imageName.substring(5, 9) >= '2023';
                                 this.identifier = this.computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
+                                console.log("openIdenfier"+`${iif2}${this.identifier}/info.json`)
                                 this.open([`${iif2}${this.identifier}/info.json`]);                                
                             }                         
                             
                             open(images) {
+                                console.log("open multi="+this.multi);
+                                console.log(images);
                                 if (this.multi) {
-                                    const re = /(MC_C_\d\d\d\d\d\d\d\d_\d\d\d\d\d\d)_(...)/;
+                                    const re = /(MC_._\d\d\d\d\d\d\d\d_\d\d\d\d\d\d)_(...)/;
                                     const image = images[0];
                                     const match = image.match(re);
                                     this.geominfo = {};
@@ -473,7 +481,8 @@
                                             }
                                         } else {
                                             const tile = this.multiGeom[raft];
-                                            const newImage = image.replace('https://lsst-camera.slac.stanford.edu/iiif/2', tile.url);
+                                            const newImage = image.replace('http://lsstcam-vs01.cp.lsst.org:8182/iiif/2/', tile.url);
+                                            console.log(newImage);
                                             super.open(newImage);
                                             this.fetchGeomInfo(`${tile.url}${match[0]}/geominfo.json`, tile.raft);
                                         }

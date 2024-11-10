@@ -4,6 +4,7 @@ package org.lsst.fits.fitsinfo;
 import javax.ws.rs.ApplicationPath;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.lsst.ccs.fits.headers.restdatasource.FitsHeaderDataSource;
 
 /**
  *
@@ -18,5 +19,6 @@ public final class MyConfiguration extends ResourceConfig {
         register(CORSResponseFilter.class);
         register(WebHook.class);
         register(EventSender.class);
+        register(FitsHeaderDataSource.class);
     }
 }
