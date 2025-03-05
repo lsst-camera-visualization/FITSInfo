@@ -18,12 +18,14 @@
                 let urlParams = new URLSearchParams(window.location.search);
                 let serverName = window.location.hostname;
                 console.log(serverName);
-                let host = serverName.indexOf("lsst.org")>=0 ? "chile" : serverName.indexOf("slac.stanford.edu")>=0 ? "slac" : "other";
-                let dataSources = ["Main Camera", "ComCam", "AuxTel", "TS8", "ComCam Tucson"];
+                let host = serverName.indexOf("cp.lsst.org")>=0 ? "chile" : serverName.indexOf("ls.lsst.org")>=0 ? "BTS" : serverName.indexOf("slac.stanford.edu")>=0 ? "slac" : "other";
+                let dataSources = ["Main Camera", "ComCam", "AuxTel", "TS8", "ComCam Tucson", "LSSTCam BTS"];
                 if (host === 'slac') {
                     dataSources = ["TS8"];
                 } else if (host === 'chile') {
                     dataSources = ["Main Camera", "ComCam", "AuxTel"];
+                } else if (host === "BTS") {
+                    dataSources = ["LSSTCam BTS"];
                 }
                 console.log(dataSources);
                 let view = urlParams.get('view');
@@ -94,7 +96,16 @@
                         dataGrid.columnOption("run", "visible", true);
                         dataGrid.columnOption("runMode", "visible", true);
                         site = "lsstcam";
-                    } else if (view == "TS8") { // TS8
+                    } else if (view === "LSSTCam BTS") { // Main camera (BTS)
+                        dataGrid.filter(["telCode", "=", "MC"]);
+                        dataGrid.columnOption("dayobs", "visible", false);
+                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
+                        dataGrid.columnOption("run", "groupIndex", 1);
+                        dataGrid.columnOption("runMode", "groupIndex", 0);
+                        dataGrid.columnOption("run", "visible", true);
+                        dataGrid.columnOption("runMode", "visible", true);
+                        site = "lsstcam-bts";
+                    } else if (view === "TS8") { // TS8
                         dataGrid.filter(["telCode", "=", "TS"]);
                         dataGrid.columnOption("dayobs", "visible", false);
                         dataGrid.columnOption("dayobs", "groupIndex", undefined);

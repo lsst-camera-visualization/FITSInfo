@@ -155,6 +155,11 @@
                         let site = "maincamera";
                         let view = urlParams.get('view');
                         let timerId = null;
+                        let sources = ["raw", "RubinTV"];
+                        //  FIXME: This is not a good idea, since it makes it impossible to check locally (on laptop)
+                        let serverName = window.location.hostname;
+                        let host = serverName.indexOf("cp.lsst.org")>=0 ? "chile" : serverName.indexOf("ls.lsst.org")>=0 ? "BTS" : serverName.indexOf("slac.stanford.edu")>=0 ? "slac" : "other";
+                        let suffix = ".cp.lsst.org";
                         $("#sourceField").hide();
                         if (view === "Tucson") {
                             iif2 = "http://comcam-dc01.tu.lsst.org:8182/iiif/2/";
@@ -168,25 +173,32 @@
                             $("#runField").hide();
                             $("#sourceField").show();
                         } else if (imageName.startsWith("CC_") || view === "ComCam") {
-                            iif2 = "http://comcam-vs01.cp.lsst.org:8182/iiif/2/";
+                            iif2 = "http://comcam-dc01.cp.lsst.org:8182/iiif/2/";
                             raftName = "R22";
                             site = "comcam";
                             $("#runField").hide();
+                            $("#sourceField").show();
+                            sources = ["raw", "postISR", "calexp"];
                         } else if (imageName.startsWith("MC_")) {
                             if (!raftName) raftName = "all";
-                            site = "lsstcam";
-                            iif2 = "http://lsstcam-vs01.cp.lsst.org:8182/iiif/2/";
+                            if (host === "BTS") {
+                                site = "lsstcam-bts";
+                                suffix = ".ls.lsst.org";                             
+                            } else {
+                                site = "lsstcam";
+                                suffix = ".cp.lsst.org";
+                            }
+                            iif2 = "http://lsstcam-vs01"+suffix+":8182/iiif/2/";   
                         }
                         let restURL = "rest/" + site + "/imageInfo/";
                         console.log("restURL="+restURL);
-                        console.log("iif2="+restURL);
+                        console.log("iif2="+iif2);
                         if (!raftName)
                             raftName = "R22";
                         let colorMaps = ["grey", "a", "b", "bb", "cubehelix0", "cubehelix1", "rainbow", "standard"];
                         if (!colorMap)
                             colorMap = colorMaps[0];
                         colorMaps.forEach(color => $("#color").append(`<option name="${color}">${color}</option>`));
-                        let sources = ["raw", "RubinTV"];
                         if (!source)
                             source = sources[0];
                         sources.forEach(source => $("#source").append(`<option name="${source}">${source}</option>`));
@@ -372,7 +384,9 @@
                                         prevButton.enable();
                                     if (imageInfo.next)
                                         nextButton.enable();
+                                    // Build the raft menu, based on provided raftMask
                                     let n = 0;
+                                    let hasCorners = false;
                                     for (let i = 0; i < 25; i++) {
                                         let raft = image.raftMask >> i & 1;
                                         if (raft) {
@@ -380,12 +394,20 @@
                                             let selected = raftName === newRaft ? "selected" : "";
                                             $("#raft").append(`<option ${selected}>${newRaft}</option>`);
                                             n++;
+                                            if (newRaft === "R00" || newRaft === "R04" || newRaft === "R40" || newRaft === "R44") {
+                                                hasCorners = true;
+                                            }
                                         }
                                     }
                                     if (n > 2) {
+                                        if (hasCorners) {
+                                            let selected = raftName === 'corners' ? "selected" : "";
+                                            $("#raft").prepend(`<option ${selected}>corners</option>`);
+                                        }
                                         let selected = raftName === 'all' ? "selected" : "";
                                         $("#raft").prepend(`<option ${selected}>all</option>`);
                                     }
+
                                 });
                         };
 
@@ -414,31 +436,31 @@
                                 const xRaft = 12688;
                                 const yRaft = 12686;
                                 this.multiGeom = {
-                                    'R00': {'url': 'http://lsstcam-dc10.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
-                                    'R01': {'url': 'http://lsstcam-dc06.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
-                                    'R02': {'url': 'http://lsstcam-dc08.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
-                                    'R03': {'url': 'http://lsstcam-dc09.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
-                                    'R04': {'url': 'http://lsstcam-dc10.cp.lsst.org:8182/iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
-                                    'R10': {'url': 'http://lsstcam-dc04.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
-                                    'R11': {'url': 'http://lsstcam-dc06.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
-                                    'R12': {'url': 'http://lsstcam-dc03.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
-                                    'R13': {'url': 'http://lsstcam-dc05.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
-                                    'R14': {'url': 'http://lsstcam-dc07.cp.lsst.org:8182/iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
-                                    'R20': {'url': 'http://lsstcam-dc04.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
-                                    'R21': {'url': 'http://lsstcam-dc07.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
-                                    'R22': {'url': 'http://lsstcam-dc03.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
-                                    'R23': {'url': 'http://lsstcam-dc09.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
-                                    'R24': {'url': 'http://lsstcam-dc07.cp.lsst.org:8182/iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
-                                    'R30': {'url': 'http://lsstcam-dc08.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
-                                    'R31': {'url': 'http://lsstcam-dc05.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
-                                    'R32': {'url': 'http://lsstcam-dc04.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
-                                    'R33': {'url': 'http://lsstcam-dc09.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
-                                    'R34': {'url': 'http://lsstcam-dc03.cp.lsst.org:8182/iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
-                                    'R40': {'url': 'http://lsstcam-dc10.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
-                                    'R41': {'url': 'http://lsstcam-dc08.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
-                                    'R42': {'url': 'http://lsstcam-dc05.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
-                                    'R43': {'url': 'http://lsstcam-dc06.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
-                                    'R44': {'url': 'http://lsstcam-dc10.cp.lsst.org:8182/iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
+                                    'R00': {'url': 'http://lsstcam-dc10'+suffix+':8182/iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
+                                    'R01': {'url': 'http://lsstcam-dc06'+suffix+':8182/iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
+                                    'R02': {'url': 'http://lsstcam-dc08'+suffix+':8182/iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
+                                    'R03': {'url': 'http://lsstcam-dc09'+suffix+':8182/iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
+                                    'R04': {'url': 'http://lsstcam-dc10'+suffix+':8182/iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
+                                    'R10': {'url': 'http://lsstcam-dc04'+suffix+':8182/iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
+                                    'R11': {'url': 'http://lsstcam-dc06'+suffix+':8182/iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
+                                    'R12': {'url': 'http://lsstcam-dc03'+suffix+':8182/iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
+                                    'R13': {'url': 'http://lsstcam-dc05'+suffix+':8182/iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
+                                    'R14': {'url': 'http://lsstcam-dc07'+suffix+':8182/iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
+                                    'R20': {'url': 'http://lsstcam-dc04'+suffix+':8182/iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
+                                    'R21': {'url': 'http://lsstcam-dc07'+suffix+':8182/iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
+                                    'R22': {'url': 'http://lsstcam-dc03'+suffix+':8182/iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
+                                    'R23': {'url': 'http://lsstcam-dc09'+suffix+':8182/iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
+                                    'R24': {'url': 'http://lsstcam-dc07'+suffix+':8182/iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
+                                    'R30': {'url': 'http://lsstcam-dc08'+suffix+':8182/iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
+                                    'R31': {'url': 'http://lsstcam-dc05'+suffix+':8182/iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
+                                    'R32': {'url': 'http://lsstcam-dc04'+suffix+':8182/iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
+                                    'R33': {'url': 'http://lsstcam-dc09'+suffix+':8182/iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
+                                    'R34': {'url': 'http://lsstcam-dc03'+suffix+':8182/iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
+                                    'R40': {'url': 'http://lsstcam-dc10'+suffix+':8182/iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
+                                    'R41': {'url': 'http://lsstcam-dc08'+suffix+':8182/iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
+                                    'R42': {'url': 'http://lsstcam-dc05'+suffix+':8182/iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
+                                    'R43': {'url': 'http://lsstcam-dc06'+suffix+':8182/iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
+                                    'R44': {'url': 'http://lsstcam-dc10'+suffix+':8182/iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
                                 };                    
                             }
                             computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source) {
@@ -462,6 +484,7 @@
                                     this.geominfo = {};
                                     if (match) {
                                         const raft = match[2];
+                                        console.log("raft="+raft);
                                         if (raft === 'all') {
                                             let tiles = [];
                                             for (const key in this.multiGeom) {
@@ -479,9 +502,27 @@
                                             for (const tile of tiles) {
                                                 this.fetchGeomInfo(tile['geominfoSource'],tile['region'].raft);
                                             }
+                                        } else if (raft === 'cor') {
+                                            let tiles = [];
+                                            for (const key of ["R00", "R04", "R40", "R44"]) {  
+                                                let region = this.multiGeom[key];
+                                                console.log("key="+key+" region="+region);
+                                                let tile = {};
+                                                tile['tileSource'] = `${region.url}${this.identifier.replace('_corners','_'+region.raft)}/info.json`;
+                                                tile['geominfoSource'] = `${region.url}${this.identifier.replace('_corners','_'+region.raft)}/geominfo.json`;
+                                                tile['region'] = region;
+                                                tile['x'] = region.x > 0 ? 0.5 : 0.0;
+                                                tile['y'] = region.y > 0 ? 0.5 : 0.0;
+                                                tile['width'] = 0.5;
+                                                tiles.push(tile);
+                                            }
+                                            super.open(tiles);
+                                            for (const tile of tiles) {
+                                                this.fetchGeomInfo(tile['geominfoSource'],tile['region'].raft);
+                                            }                                          
                                         } else {
                                             const tile = this.multiGeom[raft];
-                                            const newImage = image.replace('http://lsstcam-vs01.cp.lsst.org:8182/iiif/2/', tile.url);
+                                            const newImage = image.replace('http://lsstcam-vs01'+suffix+':8182/iiif/2/', tile.url);
                                             console.log(newImage);
                                             super.open(newImage);
                                             this.fetchGeomInfo(`${tile.url}${match[0]}/geominfo.json`, tile.raft);
@@ -585,7 +626,7 @@
                                                 text += `, ${name}(${xx}, ${yy})`;
                                                 // We want to delay the pixel value fetch unless mouse held in a fixed position
                                                 // for a certain time (100ms)
-                                                let delayedFunction = function() {
+                                                let delayedFunction = () => {
                                                     fetch(`${iif2}${this.identifier}/${x},${y}/pixel.json`)
                                                             .then(function (response) {
                                                                 return response.json();
