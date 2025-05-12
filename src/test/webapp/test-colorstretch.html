@@ -121,7 +121,10 @@
         processors: function(context, callback) {
           const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
           const pxl = imgData.data;
-          let stretch = null;
+          // for some reason, if stretch is declared here,
+          // rather than created (as a global?) in the !vcset block,
+          // zooming in causes the colormap to go green.
+          //let stretch = null;
           if (!vcset) {
             vcset = true;
             // create histogram for calculating auto-stretch
@@ -148,9 +151,9 @@
           //cstatsEl.innerHTML = 'Pixels in range ' + d.inrange + ' (' + d.underflow + ' under, ' + d.overflow + ' over)'; // cache problem
 
           // apply color stretch filter
-          if (stretch) {
+          //if (stretch) {
             ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretch);
-          }
+          //}
           context.putImageData(imgData, 0, 0);
           callback();
         }
