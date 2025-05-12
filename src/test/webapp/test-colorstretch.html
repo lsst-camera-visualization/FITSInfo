@@ -119,13 +119,14 @@
     viewer.setFilterOptions({
       filters: {
         processors: function(context, callback) {
-          let imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
-          let pxl = imgData.data;
+          const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+          const pxl = imgData.data;
+          let stretch = null;
           if (!vcset) {
             vcset = true;
             // create histogram for calculating auto-stretch
             const hist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
-            stretch = hist.makeStretcher(ColorStretch.colormaps.saoA);
+            stretch = hist.makeStretcher(ColorStretch.colormaps.saoB);
             const renderer = new ColorStretch.Renderer(hist, 700, 250, 0.1, 0.05);
             //renderer.logy = false; // linear y scale for histogram
             const colorbar = document.getElementById("colorbar");
@@ -147,7 +148,9 @@
           //cstatsEl.innerHTML = 'Pixels in range ' + d.inrange + ' (' + d.underflow + ' under, ' + d.overflow + ' over)'; // cache problem
 
           // apply color stretch filter
-          ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretch);
+          if (stretch) {
+            ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretch);
+          }
           context.putImageData(imgData, 0, 0);
           callback();
         }
@@ -160,10 +163,10 @@
     viewer.navigator.setFilterOptions({
       filters: {
         processors: function(context, callback) {
-          let imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
-          let pxl = imgData.data;
-          const hist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
-          let nstretch = hist.makeStretcher(ColorStretch.colormaps.gray);
+          const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+          const pxl = imgData.data;
+          const nhist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
+          const nstretch = nhist.makeStretcher(ColorStretch.colormaps.saoB);
           ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, nstretch);
           context.putImageData(imgData, 0, 0);
           callback();

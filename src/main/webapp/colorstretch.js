@@ -1,5 +1,19 @@
 /*
  * colorstretch - utilities to stretch colormap of LSST images
+ *
+ * Summary of usage:
+ * (assumes 18-bit encoded RGB)
+ *
+ * const context = document.getElementById("myCanvas").getContext("2d");
+ * const imgData = context.getImageData(0, 0, context.canvas.width,
+ *                                            context.canvas.height);
+ * // create histogram fro calculating auto-stretch
+ * const hist = ColorStretch.filter.accumulate(imgData.data,
+ *                                             ColorStretch.decoders.raw);
+ * // create a stretcher function to map pixel value to RGB
+ * const stretch = hist.makeStretcher(ColorStretch.colormaps.saoA);
+ * ColorStretch.filter.apply(imgData.data, 0, 0);
+ *
  */
 
 var ColorStretch = {};
@@ -71,7 +85,20 @@ var ColorStretch = {};
                                           [0,     0, 255,    0, 0]),
                255 ];
     else return overflow;
-  }
+  };
+
+  $.colormaps.saoB = function(x) {
+    if (x < 0.0) return underflow;
+    else if (x < 1.0)
+      return [ $.colormaps.interpolate(x, [0, 0.25,  0.5,   1],
+                                          [0,    0,  255, 255]),
+               $.colormaps.interpolate(x, [0,  0.5, 0.75,   1],
+                                          [0,    0,  255, 255]),
+               $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75,   1],
+                                          [0,  255,   0,    0, 255]),
+               255 ];
+    else return overflow;
+  };
 
   //===============================================================
   // colormap histogram
@@ -229,6 +256,8 @@ var ColorStretch = {};
             ndata[j] = 0;
           }
         }
+        //console.log('rebin: old xlo=' + this.xlo + ' xhi=' + this.xhi +
+        //            ' nb=' + this.nbins());
         //console.log('rebin: factor=' + factor + ' nb=' + nb +
         //            ' olddx=' + olddx);
         //console.log('rebin: xlo=' + this.xlo + ' xwidth=' + xwidth +
@@ -241,19 +270,31 @@ var ColorStretch = {};
     //-------------------------------------------------------------
     // return a new histogram with empty bins removed above and below.
     // xlo and xhi are adjusted accordingly.
+    //   xstart = starting pixel value for trimming low side
+    //     if xstart <= xlo, it will start at the lowest bin.
+    //   xstop = starting pixel value for trimming high side.
+    //     if xstop < 0, it will be relative to end.
     //-------------------------------------------------------------
-    trim: function() {
-      let ilo = 0;
+    trim: function(xstart=0, xstop=-1) {
+      const d = this.dx();
+      let ilo = ((xstart - this.xlo) / d) | 0;
+      if (ilo < 0) ilo = 0;
+      let ihi = ((xstop - this.xlo) / d) | 0;
+      if (xstop < 0) ihi = ((this.xhi + xstop - this.xlo) / d) | 0;
+      //console.log('trim: old xlo=' + this.xlo + ' xhi=' + this.xhi +
+      //            ' nb=' + this.data.length);
+      //console.log('trim: old ilo=' + ilo + ' ihi=' + ihi);
       while (this.data[ilo] == 0 && ilo < this.data.length) ilo += 1;
-      if (ilo == this.data.length) {
+      if (ilo == this.data.length || ihi < ilo) {
         // empty histogram
         return new $.Histogram([], this.xlo, this.xhi);
       }
-      let ihi = this.data.length - 1;
       while (this.data[ihi] == 0) ihi -= 1; // don't need bound check here
       ihi += 1; // exclusive upper end
-      const d = this.dx();
-      //console.log('trim: dx=' + d);
+      //console.log('trim: ilo=' + ilo + ' ihi=' + ihi);
+      //console.log('trim: dx=' + d +
+      //            ' new xlo=' + (this.xlo+ilo*d) +
+      //            ' xhi=' + (this.xlo+ihi*d));
       return new $.Histogram(this.data.slice(ilo, ihi),
                              this.xlo + ilo*d, this.xlo + ihi*d);
     },
@@ -266,6 +307,8 @@ var ColorStretch = {};
     // usually for display purposes, not for actual color-mapping.
     //-------------------------------------------------------------
     makeStretcher: function(colormap) {
+      console.log("makeStretcher: xlo=" + this.xlo + " xhi=" + this.xhi +
+                  " nbins=" + this.nbins());
       const sh = this.trim(); // trim zero bins off sides
       let sum = 0;
       let a = new Array(sh.nbins());
@@ -274,21 +317,21 @@ var ColorStretch = {};
         a[i] = sum;
       }
       const range = sum + 1; // compress cdf to range 0..1
-      let rm = new Array(sh.nbins());
-      let gm = new Array(sh.nbins());
-      let bm = new Array(sh.nbins());
+      this.rm = new Array(sh.nbins());
+      this.gm = new Array(sh.nbins());
+      this.bm = new Array(sh.nbins());
       for (let i = 0; i < sh.nbins(); i++) {
         v = colormap(a[i] / range);
-        rm[i] = v[0];
-        gm[i] = v[1];
-        bm[i] = v[2];
+        this.rm[i] = v[0];
+        this.gm[i] = v[1];
+        this.bm[i] = v[2];
       }
       return (function(cs) {
         return function(v) {
           if (v < cs.xlo) return $.colormaps.underflow;
           if (v >= cs.xhi) return $.colormaps.overflow;
           const i = ((v - cs.xlo) / cs.dx()) | 0;
-          return [ rm[i], gm[i], bm[i], 255 ];
+          return [ cs.rm[i], cs.gm[i], cs.bm[i], 255 ];
         }
       })(this);
     }
