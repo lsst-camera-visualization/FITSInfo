@@ -108,7 +108,8 @@
     //});
 
     // overall color stretcher state - do we already have one?
-    let vcset = false;
+    // (need to keep this global since it persists between
+    // calls to the filter processor)
     let stretch = null;
 
     // scale pixels and draw corresponding colorbar and histogram.
@@ -121,12 +122,7 @@
         processors: function(context, callback) {
           const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
           const pxl = imgData.data;
-          // for some reason, if stretch is declared here,
-          // rather than created (as a global?) in the !vcset block,
-          // zooming in causes the colormap to go green.
-          //let stretch = null;
-          if (!vcset) {
-            vcset = true;
+          if (!stretch) {
             // create histogram for calculating auto-stretch
             const hist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
             stretch = hist.makeStretcher(ColorStretch.colormaps.saoB);
@@ -151,9 +147,7 @@
           //cstatsEl.innerHTML = 'Pixels in range ' + d.inrange + ' (' + d.underflow + ' under, ' + d.overflow + ' over)'; // cache problem
 
           // apply color stretch filter
-          //if (stretch) {
-            ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretch);
-          //}
+          ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretch);
           context.putImageData(imgData, 0, 0);
           callback();
         }
