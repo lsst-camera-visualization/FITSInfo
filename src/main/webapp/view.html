@@ -125,7 +125,7 @@
                 <div id="toolbarDiv" class="toolbar">
                     <!-- <a href="#" class="menu_icon" id="menu_icon"><i class="material-icons">dehaze</i></a> -->
                     <div id="buttons" class="buttonGroup"></div>
-                    <span class="field">Image: <input type="text" id="imageName" size="18"></span>
+                    <span class="field">Image: <input type="text" id="imageName" size="20"></span>
                     <div id="nextPrev" class="buttonGroup"></div>
                     <span class="field">Raft: <select id="raft"></select></span>
                     <span class="field">Test Type: <input type="text" id="testType" size="8" readonly="readonly"></span>
@@ -187,8 +187,11 @@
                             } else {
                                 site = "lsstcam";
                                 suffix = ".cp.lsst.org";
+                                $("#sourceField").show();
+                                sources = ["raw", "postISR"];
                             }
-                            iif2 = "http://lsstcam-vs01"+suffix+":8182/iiif/2/";   
+                            iif2 = "http://lsstcam-vs01"+suffix+":8182/iiif/2/";
+                            $("#runField").hide();
                         }
                         let restURL = "rest/" + site + "/imageInfo/";
                         console.log("restURL="+restURL);
@@ -432,36 +435,6 @@
                                 this.geominfo = {};
                                 this.identifier = null;
 
-                                //TODO: This should not be hardwired here
-                                const xRaft = 12688;
-                                const yRaft = 12686;
-                                this.multiGeom = {
-                                    'R00': {'url': 'http://lsstcam-dc10'+suffix+':8182/iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
-                                    'R01': {'url': 'http://lsstcam-dc06'+suffix+':8182/iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
-                                    'R02': {'url': 'http://lsstcam-dc08'+suffix+':8182/iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
-                                    'R03': {'url': 'http://lsstcam-dc09'+suffix+':8182/iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
-                                    'R04': {'url': 'http://lsstcam-dc10'+suffix+':8182/iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
-                                    'R10': {'url': 'http://lsstcam-dc04'+suffix+':8182/iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
-                                    'R11': {'url': 'http://lsstcam-dc06'+suffix+':8182/iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
-                                    'R12': {'url': 'http://lsstcam-dc03'+suffix+':8182/iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
-                                    'R13': {'url': 'http://lsstcam-dc05'+suffix+':8182/iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
-                                    'R14': {'url': 'http://lsstcam-dc07'+suffix+':8182/iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
-                                    'R20': {'url': 'http://lsstcam-dc04'+suffix+':8182/iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
-                                    'R21': {'url': 'http://lsstcam-dc07'+suffix+':8182/iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
-                                    'R22': {'url': 'http://lsstcam-dc03'+suffix+':8182/iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
-                                    'R23': {'url': 'http://lsstcam-dc09'+suffix+':8182/iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
-                                    'R24': {'url': 'http://lsstcam-dc07'+suffix+':8182/iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
-                                    'R30': {'url': 'http://lsstcam-dc08'+suffix+':8182/iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
-                                    'R31': {'url': 'http://lsstcam-dc05'+suffix+':8182/iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
-                                    'R32': {'url': 'http://lsstcam-dc04'+suffix+':8182/iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
-                                    'R33': {'url': 'http://lsstcam-dc09'+suffix+':8182/iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
-                                    'R34': {'url': 'http://lsstcam-dc03'+suffix+':8182/iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
-                                    'R40': {'url': 'http://lsstcam-dc10'+suffix+':8182/iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
-                                    'R41': {'url': 'http://lsstcam-dc08'+suffix+':8182/iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
-                                    'R42': {'url': 'http://lsstcam-dc05'+suffix+':8182/iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
-                                    'R43': {'url': 'http://lsstcam-dc06'+suffix+':8182/iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
-                                    'R44': {'url': 'http://lsstcam-dc10'+suffix+':8182/iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
-                                };                    
                             }
                             computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source) {
                                 return `${imageName}_${raftName}\$colorMap=${colorMap}\$biasCorrection=${bias}\$scale=${scale}\$source=${source}`;
@@ -469,6 +442,71 @@
                             
                             openIdentifier(imageName, raftName, colorMap, bias, scale, source) {
                                 this.multi = imageName.startsWith("MC_") && imageName.substring(5, 9) >= '2023';
+                                //TODO: This should not be hardwired here
+                                const xRaft = 12688;
+                                const yRaft = 12686;
+                                if (source === "raw") {
+                                    const dc02dc10swap = site === 'lsstcam' && imageName.startsWith("MC_") && 
+                                            (imageName.substring(5, 13) >= '20250502' && imageName.substring(14,22) >= '000019') &&
+                                            (imageName.substring(5, 13) <= '20250507' && imageName.substring(14,22) <= '000039');
+                                    const dc10 = dc02dc10swap ? 'http://lsstcam-dc02' : 'http://lsstcam-dc10';
+
+                                    this.multiGeom = {
+                                        'R00': {'url': dc10+suffix+':8182/iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
+                                        'R01': {'url': 'http://lsstcam-dc06'+suffix+':8182/iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
+                                        'R02': {'url': 'http://lsstcam-dc08'+suffix+':8182/iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
+                                        'R03': {'url': 'http://lsstcam-dc09'+suffix+':8182/iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
+                                        'R04': {'url': dc10+suffix+':8182/iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
+                                        'R10': {'url': 'http://lsstcam-dc04'+suffix+':8182/iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
+                                        'R11': {'url': 'http://lsstcam-dc06'+suffix+':8182/iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
+                                        'R12': {'url': 'http://lsstcam-dc03'+suffix+':8182/iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
+                                        'R13': {'url': 'http://lsstcam-dc05'+suffix+':8182/iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
+                                        'R14': {'url': 'http://lsstcam-dc07'+suffix+':8182/iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
+                                        'R20': {'url': 'http://lsstcam-dc04'+suffix+':8182/iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
+                                        'R21': {'url': 'http://lsstcam-dc07'+suffix+':8182/iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
+                                        'R22': {'url': 'http://lsstcam-dc03'+suffix+':8182/iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
+                                        'R23': {'url': 'http://lsstcam-dc09'+suffix+':8182/iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
+                                        'R24': {'url': 'http://lsstcam-dc07'+suffix+':8182/iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
+                                        'R30': {'url': 'http://lsstcam-dc08'+suffix+':8182/iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
+                                        'R31': {'url': 'http://lsstcam-dc05'+suffix+':8182/iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
+                                        'R32': {'url': 'http://lsstcam-dc04'+suffix+':8182/iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
+                                        'R33': {'url': 'http://lsstcam-dc09'+suffix+':8182/iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
+                                        'R34': {'url': 'http://lsstcam-dc03'+suffix+':8182/iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
+                                        'R40': {'url': dc10+suffix+':8182/iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
+                                        'R41': {'url': 'http://lsstcam-dc08'+suffix+':8182/iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
+                                        'R42': {'url': 'http://lsstcam-dc05'+suffix+':8182/iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
+                                        'R43': {'url': 'http://lsstcam-dc06'+suffix+':8182/iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
+                                        'R44': {'url': dc10+suffix+':8182/iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
+                                    };
+                                } else {
+                                    this.multiGeom = {
+                                        'R00': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.8, x: 0.0, width: 0.2, ypixel: 0, xpixel: 0, raft: 'R00'}, 
+                                        'R01': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.8, x: 0.2, width: 0.2, ypixel: 0, xpixel: xRaft, raft: 'R01'}, 
+                                        'R02': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.8, x: 0.4, width: 0.2, ypixel: 0, xpixel: xRaft*2, raft: 'R02'}, 
+                                        'R03': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.8, x: 0.6, width: 0.2, ypixel: 0, xpixel: xRaft*3, raft: 'R03'}, 
+                                        'R04': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.8, x: 0.8, width: 0.2, ypixel: 0, xpixel: xRaft*4, raft: 'R04'}, 
+                                        'R10': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.6, x: 0.0, width: 0.2, ypixel: yRaft, xpixel: 0, raft: 'R10'}, 
+                                        'R11': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.6, x: 0.2, width: 0.2, ypixel: yRaft, xpixel: xRaft, raft: 'R11'}, 
+                                        'R12': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.6, x: 0.4, width: 0.2, ypixel: yRaft, xpixel: xRaft*2, raft: 'R12'},
+                                        'R13': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.6, x: 0.6, width: 0.2, ypixel: yRaft, xpixel: xRaft*3, raft: 'R13'}, 
+                                        'R14': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.6, x: 0.8, width: 0.2, ypixel: yRaft, xpixel: xRaft*4, raft: 'R14'}, 
+                                        'R20': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.4, x: 0.0, width: 0.2, ypixel: yRaft*2, xpixel: 0, raft: 'R20'}, 
+                                        'R21': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.4, x: 0.2, width: 0.2, ypixel: yRaft*2, xpixel: xRaft, raft: 'R21'}, 
+                                        'R22': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.4, x: 0.4, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*2, raft: 'R22'}, 
+                                        'R23': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.4, x: 0.6, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*3, raft: 'R23'}, 
+                                        'R24': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.4, x: 0.8, width: 0.2, ypixel: yRaft*2, xpixel: xRaft*4, raft: 'R24'}, 
+                                        'R30': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.2, x: 0.0, width: 0.2, ypixel: yRaft*3, xpixel: 0, raft: 'R30'}, 
+                                        'R31': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.2, x: 0.2, width: 0.2, ypixel: yRaft*3, xpixel: xRaft, raft: 'R31'}, 
+                                        'R32': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.2, x: 0.4, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*2, raft: 'R32'}, 
+                                        'R33': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.2, x: 0.6, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*3, raft: 'R33'}, 
+                                        'R34': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.2, x: 0.8, width: 0.2, ypixel: yRaft*3, xpixel: xRaft*4, raft: 'R34'}, 
+                                        'R40': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.0, x: 0.0, width: 0.2, ypixel: yRaft*4, xpixel: 0, raft: 'R40'}, 
+                                        'R41': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.0, x: 0.2, width: 0.2, ypixel: yRaft*4, xpixel: xRaft, raft: 'R41'}, 
+                                        'R42': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.0, x: 0.4, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*2, raft: 'R42'}, 
+                                        'R43': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.0, x: 0.6, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*3, raft: 'R43'}, 
+                                        'R44': {'url': 'http://lsstcam-vs01'+suffix+':8182/iiif/2/', y: 0.0, x: 0.8, width: 0.2, ypixel: yRaft*4, xpixel: xRaft*4, raft: 'R44'}
+                                    };   
+                                }
                                 this.identifier = this.computeImageIdentifier(imageName, raftName, colorMap, bias, scale, source);
                                 console.log("openIdenfier"+`${iif2}${this.identifier}/info.json`)
                                 this.open([`${iif2}${this.identifier}/info.json`]);                                
@@ -700,7 +738,7 @@
                 </div>
             </div>
             <div id="datastrip">
-                <div id="xy-coord">Hello!!!!</div>
+                <div id="xy-coord">Hover mouse over image for info</div>
             </div>
         </div>
     </body>
