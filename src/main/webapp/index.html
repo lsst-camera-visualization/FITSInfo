@@ -89,12 +89,14 @@
                         site = "auxtel";
                     } else if (view === "Main Camera") { // Main camera
                         dataGrid.filter(["telCode", "=", "MC"]);
-                        dataGrid.columnOption("dayobs", "visible", false);
-                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
-                        dataGrid.columnOption("run", "groupIndex", 1);
-                        dataGrid.columnOption("runMode", "groupIndex", 0);
-                        dataGrid.columnOption("run", "visible", true);
-                        dataGrid.columnOption("runMode", "visible", true);
+                        dataGrid.columnOption("dayobs", "visible", true);
+                        dataGrid.columnOption("dayobs", "groupIndex", 0);
+                        dataGrid.columnOption("imgType", "visible", true);
+                        dataGrid.columnOption("imgType", "groupIndex", 1);
+                        dataGrid.columnOption("run", "groupIndex", undefined);
+                        dataGrid.columnOption("runMode", "groupIndex", undefined);
+                        dataGrid.columnOption("run", "visible", false);
+                        dataGrid.columnOption("runMode", "visible", false);
                         site = "lsstcam";
                     } else if (view === "LSSTCam BTS") { // Main camera (BTS)
                         dataGrid.filter(["telCode", "=", "MC"]);
