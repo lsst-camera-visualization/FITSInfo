@@ -1,0 +1,181 @@
+<html>
+<head>
+<title>Test Colorbar</title>
+<link rel='stylesheet' type='text/css' media='screen'
+      href='https://openseadragon.github.io/css/style.css' />
+<script src="openseadragon/openseadragon.js"></script>
+<!-- script src="../../main/webapp/openseadragon/openseadragonrgb.js"></script -->
+<script src="openseadragon-filtering.js"></script>
+<script src="colorstretch.js"></script>
+</head>
+<body>
+<h1>Test colorbar loading once</h1>
+
+<div id="container">
+<div style="padding: 0 1.5em; height: 600px;">
+    <div class="info" style="float: left; width: 300px;">
+        <div class="position"></div>
+        <div class="zoom" style="margin-top: 3em;"></div>
+        <div class="rgb" style="margin-top: 3em;"></div>
+        <div class="colorstats" style="margin-top: 3em;"></div>
+        <div class="colorquery" style="margin-top: 3em;"></div>
+<div id="plothist"></div>
+    </div>
+    <div id="openseadragon1" style="float: right; width: 380px; height: 500px; background: black;"></div>
+</div>
+<p> Color histogram:<br>
+<canvas id="colorbar" width="700" height="250" style="border:1px solid grey"></canvas>
+</p>
+
+    <script>
+
+//===============================================================
+// viewer
+//===============================================================
+
+    var positionEl = document.querySelectorAll('.info .position')[0];
+    //positionEl.innerHTML = 'hello there';
+    var zoomEl = document.querySelectorAll('.info .zoom')[0];
+    //zoomEl.innerHTML = 'zoom this';
+    var rgbEl = document.querySelectorAll('.info .rgb')[0];
+
+    var updateZoom = function() {
+        var zoom = viewer.viewport.getZoom(true);
+        zoomEl.innerHTML = 'Zoom:<br>' + (Math.round(zoom * 100) / 100);
+    }
+
+    var openHandler = function() {
+      var tracker = new OpenSeadragon.MouseTracker({
+        element: viewer.container,
+        moveHandler: function(event) {
+            var webPoint = event.position;
+            var viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+            var vworld = viewer.world;
+            for (var i = 0; i < vworld.getItemCount(); ++i) {
+              var img = vworld.getItemAt(i);
+              var rect = img.getBounds(true); // rect in viewport coordinates
+              if (rect.containsPoint(viewportPoint)) {
+                var imagePoint = img.viewportToImageCoordinates(viewportPoint);
+                positionEl.innerHTML = 'Web:<br>' + webPoint.toString() + 
+                    '<br><br>Viewport:<br>' + viewportPoint.toString() +
+                    '<br><br>Item:<br>' + i +
+                    '<br><br>Image:<br>' + imagePoint.toString();
+                break;
+              }
+              positionEl.innerHTML = 'Web:<br>' + webPoint.toString() + 
+                  '<br><br>Viewport:<br>' + viewportPoint.toString();
+            }
+            updateZoom();     
+        }
+      });  
+
+      tracker.setTracking(true);  
+
+      viewer.addHandler('animation', updateZoom);   
+      //viewer.addHandler('viewport-change', function() { console.log('viewport-change raised'); });
+      //viewer.addHandler('update-viewport', function() { console.log('update-viewport raised'); });
+      //viewer.addHandler('animation-finish', function() { console.log('animation-finish raised'); });
+    }
+
+    var viewer = OpenSeadragon({
+        id: "openseadragon1",
+        prefixUrl: "openseadragon/images/",
+        showNavigator: true,
+        crossOriginPolicy: true,
+        maxZoomPixelRatio: 4
+      });
+
+    viewer.navigator.setFilterOptions = viewer.setFilterOptions;
+
+    openHandler();
+
+    viewer.addTiledImage({
+        tileSource: "http://comcam-vs01.cp.lsst.org:8182/iiif/2/CC_O_20241211_000611_R22$source=raw/info.json",
+        x: 0.0, y: 0.0, width: 0.4
+        //success: function() { }
+      });
+    //viewer.addTiledImage({
+    //    tileSource: "http://localhost:8172/iiif/3/MC_C_20211205_000740$raft=R11$ccd=S22$colorMap=null$source=data/info.json",
+    //    x: 0.5, y: 0.0, width: 0.4
+    //  });
+
+    // requires openseadragonrgb.js
+    //var rgbPlugin = viewer.rgb({
+    //    onCanvasHover: function(color) {
+    //      rgbEl.innerHTML = 'RGB:<br>(' + color.r + ', ' + color.g +
+    //          ', ' + color.b + ', ' + color.a + ')'
+    //    }
+    //});
+
+    // overall color stretcher state - do we already have one?
+    // (need to keep this global since it persists between
+    // calls to the filter processor)
+    let stretch = null;
+
+    // scale pixels and draw corresponding colorbar and histogram.
+    // (Unfortunately, it seems the processor isn't called every time the image
+    // is zoomed; I suspect the images are cached. As a result, the histogram
+    // doesn't always get updated, so the histogram may not reflect the
+    // current viewport.)
+    viewer.setFilterOptions({
+      filters: {
+        processors: function(context, callback) {
+          const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+          const pxl = imgData.data;
+          if (!stretch) {
+            // create histogram for calculating auto-stretch
+            const hist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
+            stretch = hist.makeStretcher(ColorStretch.colormaps.saoB);
+            const renderer = new ColorStretch.Renderer(hist, 700, 250, 0.1, 0.05);
+            //renderer.logy = false; // linear y scale for histogram
+            const colorbar = document.getElementById("colorbar");
+            const ctx = colorbar.getContext("2d");
+            // draw the histogram and colorbar
+            renderer.draw(ctx, stretch);
+            // add a mouse listener for histogram
+            colorbar.addEventListener('mousemove', function(e) {
+              let cq = document.querySelectorAll('.info .colorquery')[0];
+              let d = renderer.info(e.offsetX);
+              if (d.valid) {
+                cq.innerHTML = "Value=" + d.value + " counts=" + d.counts;
+              } else {
+                cq.innerHTML = "";
+              }
+            });
+          }
+          //let cstatsEl = document.querySelectorAll('.info .colorstats')[0];
+          //cstatsEl.innerHTML = 'Pixels in range ' + d.inrange + ' (' + d.underflow + ' under, ' + d.overflow + ' over)'; // cache problem
+
+          // apply color stretch filter
+          ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretch);
+          context.putImageData(imgData, 0, 0);
+          callback();
+        }
+      }
+      //loadMode: 'sync'
+    });
+
+    // scale pixels for the navigator.
+    // Omit drawing the colorbar and histogram.
+    viewer.navigator.setFilterOptions({
+      filters: {
+        processors: function(context, callback) {
+          const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+          const pxl = imgData.data;
+          const nhist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
+          const nstretch = nhist.makeStretcher(ColorStretch.colormaps.saoB);
+          ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, nstretch);
+          context.putImageData(imgData, 0, 0);
+          callback();
+        }
+      }
+    });
+
+    </script>
+    <noscript>
+      <p>OpenSeadragon not available unless JS enabled</p>
+    </noscript>
+</div>
+
+</body>
+</html>
