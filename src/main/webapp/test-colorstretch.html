@@ -89,17 +89,27 @@
 
     openHandler();
 
-    viewer.addTiledImage({
-        tileSource: "http://localhost:8172/iiif/3/MC_C_20211205_000740_R12_S22$colorMap=null$source=data/info.json",
-        x: 0.0, y: 0.0, width: 0.4
-        //success: function() { }
-      });
+    //viewer.addTiledImage({
+    //    tileSource: "http://localhost:8172/iiif/3/MC_C_20211205_000740_R12_S22$colorMap=null$source=data/info.json",
+    //    x: 0.0, y: 0.0, width: 0.4
+    //    //success: function() { }
+    //  });
     //viewer.addTiledImage({
     //    tileSource: "http://localhost:8172/iiif/3/MC_C_20211205_000740$raft=R11$ccd=S22$colorMap=null$source=data/info.json",
     //    x: 0.5, y: 0.0, width: 0.4
     //  });
+    viewer.addTiledImage({
+        tileSource: "http://localhost:8172/iiif/3/CC_O_20241211_000611_R22_S00$colorMap=null$source=data/info.json",
+        x: 0.0, y: 0.0, width: 0.4
+        //success: function() { }
+      });
+    viewer.addTiledImage({
+        tileSource: "http://localhost:8172/iiif/3/CC_O_20241211_000611_R22_S01$colorMap=null$source=data/info.json",
+        x: 0.5, y: 0.0, width: 0.4
+        //success: function() { }
+      });
 
-    // requires openseadragonrgb.js
+    // requires openseadragonrgb.j
     //var rgbPlugin = viewer.rgb({
     //    onCanvasHover: function(color) {
     //      rgbEl.innerHTML = 'RGB:<br>(' + color.r + ', ' + color.g +
@@ -124,7 +134,13 @@
           const pxl = imgData.data;
           if (!stretch) {
             // create histogram for calculating auto-stretch
-            const hist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
+            //const ohist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
+            const ohist = ColorStretch.filter.accumulateWithThreshold(pxl, ColorStretch.decoders.raw, context.canvas.width, 1);
+            //const hist = ohist.trim(xstart=1);
+            //const hist = ohist.trimLowerFraction(0.05);
+            const hist = ohist;
+            ColorStretch.colormaps.underflow = [0, 0, 255, 255];
+            ColorStretch.colormaps.overflow = [255, 0, 0, 255];
             stretch = hist.makeStretcher(ColorStretch.colormaps.saoB);
             const renderer = new ColorStretch.Renderer(hist, 700, 250, 0.1, 0.05);
             //renderer.logy = false; // linear y scale for histogram
@@ -163,7 +179,7 @@
           const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
           const pxl = imgData.data;
           const nhist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
-          const nstretch = nhist.makeStretcher(ColorStretch.colormaps.saoB);
+          const nstretch = nhist.makeStretcher(ColorStretch.colormaps.gray);
           ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, nstretch);
           context.putImageData(imgData, 0, 0);
           callback();

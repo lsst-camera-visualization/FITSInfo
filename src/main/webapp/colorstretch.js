@@ -49,14 +49,18 @@ var ColorStretch = {};
   // utility function to linearly interpolate between fixed points
   //   x = input argument
   //   points = array of fixed points in x.  points[0] should be 0.
+  //     range 0..1
   //   values = array of values at the corresponding fixed points.
-  // return value:  scalar function value
+  //     range 0..1
+  // return value:  scalar function value, max 255
   //---------------------------------------------------------------
   $.colormaps.interpolate = function(x, points, values) {
     for (let i = 0; i < points.length; i++) {
       if (x < points[i]) {
-        return (values[i-1] + (values[i] - values[i-1]) *
-                (x - points[i-1]) / (points[i] - points[i-1])) | 0;
+        let v = values[i-1] + (values[i] - values[i-1]) *
+                (x - points[i-1]) / (points[i] - points[i-1]);
+        let vv = (256 * v) | 0;
+        return vv > 255 ? 255 : vv;
       }
     }
     // overflow
@@ -77,12 +81,12 @@ var ColorStretch = {};
   $.colormaps.saoA = function(x) {
     if (x < 0.0) return underflow;
     else if (x < 1.0)
-      return [ $.colormaps.interpolate(x, [0, 0.25, 0.5,   1],
-                                          [0,    0, 255, 255]),
-               $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75,   1],
-                                          [0,  255,   0,    0, 255]),
+      return [ $.colormaps.interpolate(x, [0, 0.25, 0.5, 1],
+                                          [0,    0,   1, 1]),
+               $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75, 1],
+                                          [0,    1,   0,    0, 1]),
                $.colormaps.interpolate(x, [0, 0.125, 0.5, 0.75, 1],
-                                          [0,     0, 255,    0, 0]),
+                                          [0,     0,   1,    0, 0]),
                255 ];
     else return overflow;
   };
@@ -90,12 +94,38 @@ var ColorStretch = {};
   $.colormaps.saoB = function(x) {
     if (x < 0.0) return underflow;
     else if (x < 1.0)
-      return [ $.colormaps.interpolate(x, [0, 0.25,  0.5,   1],
-                                          [0,    0,  255, 255]),
-               $.colormaps.interpolate(x, [0,  0.5, 0.75,   1],
-                                          [0,    0,  255, 255]),
-               $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75,   1],
-                                          [0,  255,   0,    0, 255]),
+      return [ $.colormaps.interpolate(x, [0, 0.25,  0.5, 1],
+                                          [0,    0,    1, 1]),
+               $.colormaps.interpolate(x, [0,  0.5, 0.75, 1],
+                                          [0,    0,    1, 1]),
+               $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75, 1],
+                                          [0,    1,   0,    0, 1]),
+               255 ];
+    else return overflow;
+  };
+
+  $.colormaps.saoBB = function(x) {
+    if (x < 0.0) return underflow;
+    else if (x < 1.0)
+      return [ $.colormaps.interpolate(x, [0, 0.5, 1],
+                                          [0,   1, 1]),
+               $.colormaps.interpolate(x, [0, 0.25, 0.75, 1],
+                                          [0,    0,    1, 1]),
+               $.colormaps.interpolate(x, [0, 0.5, 1],
+                                          [0,   0, 1]),
+               255 ];
+    else return overflow;
+  };
+
+  $.colormaps.standard = function(x) {
+    if (x < 0.0) return underflow;
+    else if (x < 1.0)
+      return [ $.colormaps.interpolate(x, [0, 0.333, 0.333, 0.666, 0.666, 1],
+                                          [0, 0.3  , 0    , 0.3  , 0.3  , 1]),
+               $.colormaps.interpolate(x, [0, 0.333, 0.333, 0.666, 0.666, 1],
+                                          [0, 0.3  , 0.3  , 1.0  , 0    , 0.3]),
+               $.colormaps.interpolate(x, [0, 0.333, 0.333, 0.666, 0.666, 1],
+                                          [0, 1.0  , 0.0  , 0.3  , 0    , 0.3]),
                255 ];
     else return overflow;
   };
@@ -256,12 +286,12 @@ var ColorStretch = {};
             ndata[j] = 0;
           }
         }
-        //console.log('rebin: old xlo=' + this.xlo + ' xhi=' + this.xhi +
-        //            ' nb=' + this.nbins());
-        //console.log('rebin: factor=' + factor + ' nb=' + nb +
-        //            ' olddx=' + olddx);
-        //console.log('rebin: xlo=' + this.xlo + ' xwidth=' + xwidth +
-        //            ' new nbins=' + ndata.length);
+        console.log('rebin: old xlo=' + this.xlo + ' xhi=' + this.xhi +
+                    ' nb=' + this.nbins());
+        console.log('rebin: factor=' + factor + ' nb=' + nb +
+                    ' olddx=' + olddx);
+        console.log('rebin: xlo=' + this.xlo + ' xwidth=' + xwidth +
+                    ' new nbins=' + ndata.length);
         nh = new $.Histogram(ndata, this.xlo, this.xlo + xwidth)
         return nh;
       }
@@ -298,6 +328,32 @@ var ColorStretch = {};
       return new $.Histogram(this.data.slice(ilo, ihi),
                              this.xlo + ilo*d, this.xlo + ihi*d);
     },
+
+    //-------------------------------------------------------------
+    // trim lower fraction
+    //-------------------------------------------------------------
+    trimLowerFraction: function(frac) {
+      let cs = new Array(this.nbins());
+      let sum = 0;
+      for (let i = 0; i < this.nbins(); i++) {
+        sum += this.data[i];
+        cs[i] = sum;
+      }
+      let threshold = frac * sum;
+      for (let i = 0; i < this.nbins(); i++) {
+        console.log('trimLowerFraction: i=' + i + ' cs[i]=' + cs[i]);
+        if (cs[i] > threshold) {
+          console.log('trimLowerFraction(' + frac + '): threshold=' +
+                      threshold + ' cs[i]=' + cs[i] + ' xstart=' + i);
+          return this.trim(xstart=i);
+        }
+      }
+      return this;
+    },
+
+    //-------------------------------------------------------------
+    // trim lower fraction and neighboring points (needs pixels again)
+    //-------------------------------------------------------------
 
     //-------------------------------------------------------------
     // return a stretcher function derived from the cdf.
@@ -375,7 +431,7 @@ var ColorStretch = {};
 
     // dimensions of parts
     this.histw = (1.0 - margin) * width | 0;
-    this.histh = (1.0 - margin) * height | 0;
+    this.histh = (((1.0 - margin - barHeight) * height) | 0) - this.barSpacer;
     this.xbase = width - this.histw;
 
     this.hist = hist.trim().rebin(this.histw); // trim and rebin for rendering
@@ -394,20 +450,43 @@ var ColorStretch = {};
       const n = Math.min(width, this.hist.nbins());
       const d = this.hist.dx();
       for (let i = 0; i < n; i++) {
-        let v = i * d + this.hist.xlo;
-        let c = stretcher(v);
+        const v = i * d + this.hist.xlo;
+        const c = stretcher(v);
         //console.log('horizontalBar: i=' + i + ' v=' + v +
         //            ' r=' + c[0] + ' g=' + c[1] + ' b=' + c[2] + ' a=' + c[3]);
-        let p = i * 4;
+        const p = i * 4;
         pxl[p] = c[0];
         pxl[p+1] = c[1];
         pxl[p+2] = c[2];
         pxl[p+3] = c[3];
       }
       for (let j = 1; j < height; j++) {
-        let p = j * width * 4;
+        const p = j * n * 4;
         for (let i = 0; i < 4*n; i++) pxl[p+i] = pxl[i];
       }
+      // draw color traces in order or r, g, and b
+      // (stretching seems to make this less useful)
+      /*
+      for (let i = 0; i < n; i++) {
+        const p = i * 4;
+        let y = height - (pxl[p] * height / 256) | 0;
+        pxl[y*width+p] = 255;
+        pxl[y*width+p+1] = 0;
+        pxl[y*width+p+2] = 0;
+        pxl[y*width+p+3] = 255;
+        y = height - (pxl[p+1] * height / 256) | 0;
+        pxl[y*width+p] = 0;
+        pxl[y*width+p+1] = 255;
+        pxl[y*width+p+2] = 0;
+        pxl[y*width+p+3] = 255;
+        y = height - (pxl[p+2] * height / 256) | 0;
+        console.log('horizontalBar: i=' + i + ' y=' + y + ' b=' + pxl[p]);
+        pxl[y*width+p] = 0;
+        pxl[y*width+p+1] = 0;
+        pxl[y*width+p+2] = 255;
+        pxl[y*width+p+3] = 255;
+      }
+      */
     },
 
     //-------------------------------------------------------------
@@ -647,7 +726,7 @@ var ColorStretch = {};
     let xmax = 0;
     let counts = new Array(1 << 18);
     for (let i = 0; i < counts.length; i++) counts[i] = 0;
-    for (let i = 0; i < pxl.length; i += 4) {
+    for (let i = 0; i < 4 * pxl.length; i += 4) {
       let v = decoder(pxl[i], pxl[i+1], pxl[i+2], pxl[i+3]);
       counts[v] += 1;
       if (v > xmax) xmax = v;
@@ -660,6 +739,72 @@ var ColorStretch = {};
     return hist;
   };
 
+  //---------------------------------------------------------------
+  // make a histogram based on pixels
+  //     which are above threshold,
+  //     and are not adjacent to below-threshold pixels
+  //   pxl = pixel array, as from context.getImageData(...).data
+  //   decoder = function rgba -> scalar pixel value
+  //   pwidth = width in pixels of pxl array
+  //   threshold = minimum pixel value to accept
+  //---------------------------------------------------------------
+  $.filter.accumulateWithThreshold = function(pxl, decoder, pwidth, threshold) {
+    let xmin = 1 << 18;
+    let xmax = 0;
+    let counts = new Array(1 << 18);
+    for (let i = 0; i < counts.length; i++) counts[i] = 0;
+
+    // buffer three rows
+    let v = [ new Array(pwidth), new Array(pwidth), new Array(pwidth) ];
+    for (let i = 0; i < pwidth; i++) v[0][i] = 1 << 18; // out of bounds
+    const decodeRow = function(vs, ps, base, w) {
+      let j = 0;
+      for (let i = base; i < base + 4*w; i += 4) {
+        vs[j++] = decoder(ps[i], ps[i+1], ps[i+2], ps[i+3]);
+      }
+      return v;
+    }
+    decodeRow(v[1], pxl, 0, pwidth);
+    decodeRow(v[2], pxl, 4*pwidth, pwidth);
+    v0 = v[0]; // moving row references
+    v1 = v[1];
+    v2 = v[2];
+
+    const pheight = pxl.length / pwidth;
+    for (let irow = 0; irow < pheight; irow++) {
+      for (let i = 0; i < pwidth; i++) {
+        if (v1[i] < threshold) continue;
+        if (v0[i] < threshold || v2[i] < threshold) continue;
+        if (i > 0) {
+          if (v0[i-1] < threshold || v1[i-1] < threshold || v2[i-1] < threshold)
+            continue;
+        } else if (i < pwidth - 1) {
+          if (v0[i+1] < threshold || v1[i+1] < threshold || v2[i+1] < threshold)
+            continue;
+        }
+        // pixel passes all thresholds
+        const vi = v1[i];
+        counts[vi] += 1;
+        if (vi > xmax) xmax = vi;
+        if (vi < xmin) xmin = vi;
+      }
+      // update rows
+      let va = v0; // will overwrite this row
+      v0 = v1;
+      v1 = v2;
+      if (irow == pheight - 1) { // last row - fill next row with 1<<18
+        for (let i = 0; i < pwidth; i++) va[i] = 1 << 18;
+      } else {
+        decodeRow(va, pxl, 4*pwidth*(irow+1), pwidth);
+      }
+      v2 = va;
+    }
+    let bins = new Array(xmax - xmin + 1);
+    let j = 0;
+    for (let i = xmin; i <= xmax; i++) bins[j++] = counts[i];
+    let hist = new ColorStretch.Histogram(bins, xmin, xmax+1);
+    return hist;
+  };
 
 })(ColorStretch);
 
