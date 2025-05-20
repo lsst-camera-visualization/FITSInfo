@@ -32,6 +32,14 @@ var ColorStretch = {};
     return (r << 10) | (g << 2) | (b >> 6) | 0;
   }
 
+  //---------------------------------------------------------------
+  // 24-bit pixel values encoded in RGB fields
+  // (probably used if FITS file used floats)
+  //---------------------------------------------------------------
+  $.decoders.int24 = function(r, g, b, a) {
+    return (r << 16) | (g << 8) | b | 0;
+  }
+
 //=================================================================
 // colormaps:  functions which map scalar 0..1 to rgba.
 // Giving these functions a value < 0 returns the underflow array.
@@ -466,27 +474,30 @@ var ColorStretch = {};
       }
       // draw color traces in order or r, g, and b
       // (stretching seems to make this less useful)
-      /*
       for (let i = 0; i < n; i++) {
         const p = i * 4;
-        let y = height - (pxl[p] * height / 256) | 0;
-        pxl[y*width+p] = 255;
-        pxl[y*width+p+1] = 0;
-        pxl[y*width+p+2] = 0;
-        pxl[y*width+p+3] = 255;
-        y = height - (pxl[p+1] * height / 256) | 0;
-        pxl[y*width+p] = 0;
-        pxl[y*width+p+1] = 255;
-        pxl[y*width+p+2] = 0;
-        pxl[y*width+p+3] = 255;
-        y = height - (pxl[p+2] * height / 256) | 0;
-        console.log('horizontalBar: i=' + i + ' y=' + y + ' b=' + pxl[p]);
-        pxl[y*width+p] = 0;
-        pxl[y*width+p+1] = 0;
-        pxl[y*width+p+2] = 255;
-        pxl[y*width+p+3] = 255;
+        const r = pxl[p];
+        const g = pxl[p+1];
+        const b = pxl[p+2];
+        let y = height - (r * height / 256) | 0;
+        let base = 4 * width * y;
+        pxl[base+p] = 255;
+        pxl[base+p+1] = 0;
+        pxl[base+p+2] = 0;
+        pxl[base+p+3] = 255;
+        y = height - (g * height / 256) | 0;
+        base = 4 * width * y;
+        pxl[base+p] = 0;
+        pxl[base+p+1] = 255;
+        pxl[base+p+2] = 0;
+        pxl[base+p+3] = 255;
+        y = height - (b * height / 256) | 0;
+        base = 4 * width * y;
+        pxl[base+p] = 0;
+        pxl[base+p+1] = 0;
+        pxl[base+p+2] = 255;
+        pxl[base+p+3] = 255;
       }
-      */
     },
 
     //-------------------------------------------------------------
@@ -626,9 +637,10 @@ var ColorStretch = {};
       // horizontal axis (assume colorbar serves as line)
       //console.log("horizontal axis dx=" + this.hist.dx());
       const xtics = this.hist.getXTics();
+      const xtl = ((this.height - this.histh - barh - this.barSpacer) / 3) | 0;
       this.horizontalAxis(context, xtics,
                           this.histh + barh + this.barSpacer,
-                          this.histh + barh + this.barSpacer + ((barh/2)|0));
+                          this.histh + barh + this.barSpacer + xtl);
 
       // vertical axis:  linear or log
       let ytics = null;

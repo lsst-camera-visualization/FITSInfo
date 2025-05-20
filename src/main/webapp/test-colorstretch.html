@@ -141,8 +141,8 @@
             const hist = ohist;
             ColorStretch.colormaps.underflow = [0, 0, 255, 255];
             ColorStretch.colormaps.overflow = [255, 0, 0, 255];
-            stretch = hist.makeStretcher(ColorStretch.colormaps.gray);
-            const renderer = new ColorStretch.Renderer(hist, 700, 250, 0.1, 0.05);
+            stretch = hist.makeStretcher(ColorStretch.colormaps.standard);
+            const renderer = new ColorStretch.Renderer(hist, 700, 250, 0.1, 0.25);
             //renderer.logy = false; // linear y scale for histogram
             const colorbar = document.getElementById("colorbar");
             const ctx = colorbar.getContext("2d");
