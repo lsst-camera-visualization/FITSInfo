@@ -726,7 +726,7 @@ var ColorStretch = {};
     let xmax = 0;
     let counts = new Array(1 << 18);
     for (let i = 0; i < counts.length; i++) counts[i] = 0;
-    for (let i = 0; i < 4 * pxl.length; i += 4) {
+    for (let i = 0; i < pxl.length; i += 4) {
       let v = decoder(pxl[i], pxl[i+1], pxl[i+2], pxl[i+3]);
       counts[v] += 1;
       if (v > xmax) xmax = v;
