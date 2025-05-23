@@ -139,6 +139,71 @@ var ColorStretch = {};
   };
 
   //===============================================================
+  // axis tic utilities
+  //   w = width to subdivide
+  //   ndiv = target number of divisions
+  //===============================================================
+  $.axes = {};
+
+  //-------------------------------------------------------------
+  // truncate a value (usually a width) to a specified granularity
+  //   w = value to truncate
+  //   ndiv = target number of divisions
+  // return value:  the truncated value
+  //-------------------------------------------------------------
+  $.axes.truncate = function(w, ndiv) {
+    let n = w / ndiv; // initial bin width
+    let tens = 1;
+    while (n < 1) {
+      n *= 10;
+      tens /= 10;
+    }
+    while (n > 10) {
+      n /= 10;
+      tens *= 10;
+    }
+    n = (n | 0);
+    if (n > 5) n = 5;
+    else if (n > 2) n = 2;
+    return n*tens;
+  };
+
+  //-------------------------------------------------------------
+  // figure out how many tics there should be
+  // based on how many digits in x width.
+  // This should also work for xlo and xhi < 1.
+  // return:  array of values for the tics
+  //-------------------------------------------------------------
+  $.axes.tics = function(xlo, xhi, ndiv) {
+    const w = $.axes.truncate(xhi - xlo, 5);
+    let v = [];
+    for (let x = Math.ceil(xlo / w) * w; x < xhi; x += w) v.push(x);
+    return v;
+  };
+
+  //-------------------------------------------------------------
+  // figure out how many tics there should be,
+  // with logarithmic spacing.
+  // return:  array of values for the tics.
+  //-------------------------------------------------------------
+  $.axes.logtics = function(xlo, xhi) {
+    // find largest power of 10 < xlo
+    let x = xlo;
+    let tens = 1;
+    while (x < 0.99) {
+      x *= 10;
+      tens /= 10;
+    }
+    while (x > 10) {
+      x /= 10;
+      tens *= 10;
+    }
+    let v = [];
+    for (let y = tens; y < xhi; y *= 10) v.push(y);
+    return v;
+  };
+
+  //===============================================================
   // colormap histogram
   //   1. histogram counts the number of pixels with a certain
   //      pixel value.
@@ -209,51 +274,18 @@ var ColorStretch = {};
     },
 
     //-------------------------------------------------------------
-    // truncate a value to a specified granularity
-    //   w = value to truncate
-    //   ndiv = target number of divisions
-    // return value:  the truncated value
-    //-------------------------------------------------------------
-    truncate: function(w, ndiv) {
-      let n = w / ndiv; // initial bin width
-      let tens = 1;
-      while (n > 10) {
-        n /= 10;
-        tens *= 10;
-      }
-      n = (n | 0);
-      if (n > 5) n = 5;
-      else if (n > 2) n = 2;
-      return n*tens;
-    },
-
-    //-------------------------------------------------------------
     // figure out how many tics there should be
     // based on how many digits in x width.
     // return:  array of x values for the tics
     //-------------------------------------------------------------
-    getXTics: function() {
-      const binwidth = this.truncate(this.xhi - this.xlo, 5);
-      let v = [];
-      for (let x = Math.ceil(this.xlo / binwidth) * binwidth;
-           x < this.xhi; x += binwidth) {
-        v.push(x);
-      }
-      return v;
-    },
+    getXTics: function() { return $.axes.tics(this.xlo, this.xhi, 5); },
 
     //-------------------------------------------------------------
     // figure out how many tics there should be in y.
     // assume the bottom of the histogram is 0.
     // return:  array of y values for the tics
     //-------------------------------------------------------------
-    getYTics: function() {
-      const binwidth = this.truncate(this.yhi(), 5);
-      let v = [];
-      let yh = this.yhi();
-      for (let y = 0; y < yh; y += binwidth) v.push(y);
-      return v;
-    },
+    getYTics: function() { return $.axes.tics(0, this.yhi(), 5); },
 
     //-------------------------------------------------------------
     // figure out how many tics there should be in y,
@@ -261,12 +293,7 @@ var ColorStretch = {};
     // assume the bottom corresponds to y=1.
     // return:  array of y values for the tics.
     //-------------------------------------------------------------
-    getLogYTics: function() {
-      let v = [];
-      let yh = this.yhi();
-      for (let y = 1; y < yh; y *= 10) v.push(y);
-      return v;
-    },
+    getLogYTics: function() { return $.axes.logtics(1, this.yhi()); },
 
     //-------------------------------------------------------------
     // rebin so that the new histogram has the maximum bins specified.
@@ -469,7 +496,7 @@ var ColorStretch = {};
         pxl[p+3] = c[3];
       }
       for (let j = 1; j < height; j++) {
-        const p = j * n * 4;
+        const p = j * width * 4;
         for (let i = 0; i < 4*n; i++) pxl[p+i] = pxl[i];
       }
       // draw color traces in order or r, g, and b

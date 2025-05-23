@@ -98,16 +98,30 @@
     //    tileSource: "http://localhost:8172/iiif/3/MC_C_20211205_000740$raft=R11$ccd=S22$colorMap=null$source=data/info.json",
     //    x: 0.5, y: 0.0, width: 0.4
     //  });
-    viewer.addTiledImage({
-        tileSource: "http://localhost:8172/iiif/3/CC_O_20241211_000611_R22$colorMap=null$source=data/info.json",
-        x: 0.0, y: 0.0, width: 0.4
-        //success: function() { }
-      });
+
+    //viewer.addTiledImage({
+    //    tileSource: "http://localhost:8172/iiif/3/CC_O_20241211_000611_R22$colorMap=null$source=data/info.json",
+    //    x: 0.0, y: 0.0, width: 0.4
+    //    //success: function() { }
+    //  });
+
     //viewer.addTiledImage({
     //    tileSource: "http://localhost:8172/iiif/3/CC_O_20241211_000611_R22_S01$colorMap=null$source=data/info.json",
     //    x: 0.5, y: 0.0, width: 0.4
     //    //success: function() { }
     //  });
+
+    //viewer.addTiledImage({
+    //    tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S00_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
+    //    x: 0.0, y: 0.0, width: 1.0
+    //    //success: function() { }
+    //  });
+
+    viewer.addTiledImage({
+        tileSource: "http://localhost:8172/iiif/3/testb$source=direct$colorMap=null/info.json",
+        x: 0.0, y: 0.0, width: 1.0
+        //success: function() { }
+      });
 
     // requires openseadragonrgb.j
     //var rgbPlugin = viewer.rgb({
@@ -141,7 +155,7 @@
             const hist = ohist;
             ColorStretch.colormaps.underflow = [0, 0, 255, 255];
             ColorStretch.colormaps.overflow = [255, 0, 0, 255];
-            stretch = hist.makeStretcher(ColorStretch.colormaps.standard);
+            stretch = hist.makeStretcher(ColorStretch.colormaps.gray);
             const renderer = new ColorStretch.Renderer(hist, 700, 250, 0.1, 0.25);
             //renderer.logy = false; // linear y scale for histogram
             const colorbar = document.getElementById("colorbar");
