@@ -41,9 +41,9 @@ public class WebHook {
     @Path("/update")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response update(@Context Sse sse, Map<String, String> data) {
+    public Response update(@Context Sse sse, Map<String, Object> data) {
         try {
-            ImageName image = new ImageName(data.get("exp_id"));
+            ImageName image = new ImageName((String) data.get("exp_id"));
             LOG.log(Level.INFO, "Webhook update: {0} {1}", new Object[]{image, data});
             return Response.ok().build();
         } catch (RuntimeException x) {
