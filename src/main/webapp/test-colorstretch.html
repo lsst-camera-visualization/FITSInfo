@@ -25,6 +25,7 @@
 </div>
 <p> Color histogram:<br>
 <canvas id="colorbar" width="700" height="250" style="border:1px solid grey"></canvas>
+<canvas id="dhist" width="700" height="250" style="border:1px solid grey"></canvas>
 </p>
 
     <script>
@@ -75,6 +76,8 @@
       //viewer.addHandler('viewport-change', function() { console.log('viewport-change raised'); });
       //viewer.addHandler('update-viewport', function() { console.log('update-viewport raised'); });
       //viewer.addHandler('animation-finish', function() { console.log('animation-finish raised'); });
+
+      //viewer.addHandler('zoom', function(ev) { console.log('zoom raised: ' + ev.zoom); });
     }
 
     var viewer = OpenSeadragon({
@@ -111,17 +114,17 @@
     //    //success: function() { }
     //  });
 
-    //viewer.addTiledImage({
-    //    tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S00_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
-    //    x: 0.0, y: 0.0, width: 1.0
-    //    //success: function() { }
-    //  });
-
     viewer.addTiledImage({
-        tileSource: "http://localhost:8172/iiif/3/testb$source=direct$colorMap=null/info.json",
+        tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S00_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
         x: 0.0, y: 0.0, width: 1.0
         //success: function() { }
       });
+
+    //viewer.addTiledImage({
+    //    tileSource: "http://localhost:8172/iiif/3/testb$source=direct$colorMap=null/info.json",
+    //    x: 0.0, y: 0.0, width: 1.0
+    //    //success: function() { }
+    //  });
 
     // requires openseadragonrgb.j
     //var rgbPlugin = viewer.rgb({
@@ -131,10 +134,58 @@
     //    }
     //});
 
-    // overall color stretcher state - do we already have one?
-    // (need to keep this global since it persists between
-    // calls to the filter processor)
-    let stretch = null;
+    // simple auto-scale filter
+    var simpleAutoScaleFilter = function(context, callback) {
+      console.log('simpleAutoScaleFilter');
+      const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+      const pxl = imgData.data;
+      const nhist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
+      const nstretch = nhist.makeStretcher(ColorStretch.colormaps.gray);
+      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, nstretch);
+      context.putImageData(imgData, 0, 0);
+      callback();
+    };
+
+    // auto-scale filter with histogram and colorbar
+    let stretch = null; // do we already have one? (only do once)
+    var histAutoScaleFilter = function(context, callback) {
+      console.log('histAutoScaleFilter');
+      const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+      const pxl = imgData.data;
+      //if (!stretch) {
+        //const ohist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
+        const ohist = ColorStretch.filter.accumulateWithThreshold(pxl, ColorStretch.decoders.raw, context.canvas.width, 1);
+        //const hist = ohist.trim(xstart=1);
+        //const hist = ohist.trimLowerFraction(0.05);
+        const hist = ohist;
+        ColorStretch.colormaps.underflow = [0, 0, 255, 255];
+        ColorStretch.colormaps.overflow = [255, 0, 0, 255];
+        stretch = hist.makeStretcher(ColorStretch.colormaps.gray);
+        const renderer = new ColorStretch.Renderer(hist, 700, 250, 0.1, 0.25);
+        //renderer.logy = false; // linear y scale for histogram
+        const colorbar = document.getElementById("colorbar");
+        const ctx = colorbar.getContext("2d");
+        // draw the histogram and colorbar
+        renderer.draw(ctx, stretch);
+        // add a mouse listener for histogram
+        colorbar.addEventListener('mousemove', function(e) {
+          let cq = document.querySelectorAll('.info .colorquery')[0];
+          let d = renderer.info(e.offsetX);
+          if (d.valid) {
+            cq.innerHTML = "Value=" + d.value + " counts=" + d.counts;
+          } else {
+            cq.innerHTML = "";
+          }
+        });
+      //}
+      //let cstatsEl = document.querySelectorAll('.info .colorstats')[0];
+      //cstatsEl.innerHTML = 'Pixels in range ' + d.inrange + ' (' + d.underflow + ' under, ' + d.overflow + ' over)'; // cache problem
+
+      // apply color stretch filter
+      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretch);
+      context.putImageData(imgData, 0, 0);
+      callback();
+    };
 
     // scale pixels and draw corresponding colorbar and histogram.
     // (Unfortunately, it seems the processor isn't called every time the image
@@ -142,63 +193,19 @@
     // doesn't always get updated, so the histogram may not reflect the
     // current viewport.)
     viewer.setFilterOptions({
-      filters: {
-        processors: function(context, callback) {
-          const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
-          const pxl = imgData.data;
-          if (!stretch) {
-            // create histogram for calculating auto-stretch
-            //const ohist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
-            const ohist = ColorStretch.filter.accumulateWithThreshold(pxl, ColorStretch.decoders.raw, context.canvas.width, 1);
-            //const hist = ohist.trim(xstart=1);
-            //const hist = ohist.trimLowerFraction(0.05);
-            const hist = ohist;
-            ColorStretch.colormaps.underflow = [0, 0, 255, 255];
-            ColorStretch.colormaps.overflow = [255, 0, 0, 255];
-            stretch = hist.makeStretcher(ColorStretch.colormaps.gray);
-            const renderer = new ColorStretch.Renderer(hist, 700, 250, 0.1, 0.25);
-            //renderer.logy = false; // linear y scale for histogram
-            const colorbar = document.getElementById("colorbar");
-            const ctx = colorbar.getContext("2d");
-            // draw the histogram and colorbar
-            renderer.draw(ctx, stretch);
-            // add a mouse listener for histogram
-            colorbar.addEventListener('mousemove', function(e) {
-              let cq = document.querySelectorAll('.info .colorquery')[0];
-              let d = renderer.info(e.offsetX);
-              if (d.valid) {
-                cq.innerHTML = "Value=" + d.value + " counts=" + d.counts;
-              } else {
-                cq.innerHTML = "";
-              }
-            });
-          }
-          //let cstatsEl = document.querySelectorAll('.info .colorstats')[0];
-          //cstatsEl.innerHTML = 'Pixels in range ' + d.inrange + ' (' + d.underflow + ' under, ' + d.overflow + ' over)'; // cache problem
-
-          // apply color stretch filter
-          ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretch);
-          context.putImageData(imgData, 0, 0);
-          callback();
-        }
-      }
-      //loadMode: 'sync'
+      filters: { processors: histAutoScaleFilter }
     });
 
     // scale pixels for the navigator.
     // Omit drawing the colorbar and histogram.
     viewer.navigator.setFilterOptions({
-      filters: {
-        processors: function(context, callback) {
-          const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
-          const pxl = imgData.data;
-          const nhist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
-          const nstretch = nhist.makeStretcher(ColorStretch.colormaps.gray);
-          ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, nstretch);
-          context.putImageData(imgData, 0, 0);
-          callback();
-        }
-      }
+      filters: { processors: simpleAutoScaleFilter }
+    });
+
+    viewer.addHandler('zoom', function(ev) {
+      viewer.setFilterOptions({
+        filters: { processors: histAutoScaleFilter }
+      });
     });
 
     </script>

@@ -257,7 +257,7 @@ var ColorStretch = {};
     // return value:  the histogram object
     //-------------------------------------------------------------
     fill: function(x) {
-      if (x.isArray()) {
+      if (x instanceof Array) {
         for (let j = 0; j < x.length; j++) {
           if (x[j] >= this.xlo && x[j] < this.xhi) {
             const i = ((x[j]-this.xlo)*this.data.length/(this.xhi-this.xlo))|0;
@@ -270,6 +270,25 @@ var ColorStretch = {};
           this.data[i] += 1;
         }
       }
+      return this;
+    },
+
+    //-------------------------------------------------------------
+    // add another histogram to this one
+    //-------------------------------------------------------------
+    add: function(hist) {
+      if (this.data.length != hist.data.length ||
+          this.xlo != hist.xlo ||
+          this.xhi != hist.xhi) return null; // histograms don't match
+      for (let i = 0; i < this.data.length; i++) this.data[i] += hist.data[i];
+      return this;
+    },
+
+    //-------------------------------------------------------------
+    // reset the histogram to zero
+    //-------------------------------------------------------------
+    reset: function() {
+      for (let i = 0; i < this.data.length; i++) this.data[i] = 0;
       return this;
     },
 
@@ -756,6 +775,20 @@ var ColorStretch = {};
   };
 
   //---------------------------------------------------------------
+  // fill a histogram based on given pixels
+  //   hist = existing Histogram
+  //   pxl = pixel array, as from context.getImageData(...).data
+  //   decoder = function rgba -> scalar pixel value
+  //---------------------------------------------------------------
+  $.filter.fill = function(hist, pxl, decoder) {
+    for (let i = 0; i < pxl.length; i += 4) {
+      let v = decoder(pxl[i], pxl[i+1], pxl[i+2], pxl[i+3]);
+      hist.fill(v);
+    }
+    return hist;
+  };
+
+  //---------------------------------------------------------------
   // make a histogram based on given pixels
   //   pxl = pixel array, as from context.getImageData(...).data
   //   decoder = function rgba -> scalar pixel value
@@ -767,6 +800,28 @@ var ColorStretch = {};
     for (let i = 0; i < counts.length; i++) counts[i] = 0;
     for (let i = 0; i < pxl.length; i += 4) {
       let v = decoder(pxl[i], pxl[i+1], pxl[i+2], pxl[i+3]);
+      counts[v] += 1;
+      if (v > xmax) xmax = v;
+      if (v < xmin) xmin = v;
+    }
+    let bins = new Array(xmax - xmin + 1);
+    let j = 0;
+    for (let i = xmin; i <= xmax; i++) bins[j++] = counts[i];
+    let hist = new ColorStretch.Histogram(bins, xmin, xmax+1);
+    return hist;
+  };
+
+  //---------------------------------------------------------------
+  // make a histogram based on given pixels, range [xlo,xhi)
+  //---------------------------------------------------------------
+  $.filter.accumulateWithRange = function(pxl, decoder, xlo, xhi) {
+    let xmin = 1 << 18;
+    let xmax = 0;
+    let counts = new Array(xhi);
+    for (let i = 0; i < counts.length; i++) counts[i] = 0;
+    for (let i = 0; i < pxl.length; i += 4) {
+      const v = decoder(pxl[i], pxl[i+1], pxl[i+2], pxl[i+3]);
+      if (v < xlo || v >= xhi) continue;
       counts[v] += 1;
       if (v > xmax) xmax = v;
       if (v < xmin) xmin = v;
