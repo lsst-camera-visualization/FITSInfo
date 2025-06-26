@@ -1,0 +1,210 @@
+<html>
+<head>
+<title>Test Simple Stretch</title>
+<link rel='stylesheet' type='text/css' media='screen'
+      href='https://openseadragon.github.io/css/style.css' />
+<script src="openseadragon/openseadragon.js"></script>
+<script src="openseadragon-filtering.js"></script>
+<script src="colorstretch.js"></script>
+<script src="d3.min.js"></script>
+<script src="plot.min.js"></script>
+</head>
+<body>
+<h1>Test simple stretch</h1>
+
+<div id="container">
+<div style="padding: 0 1.5em; height: 600px;">
+    <div class="info" style="float: left; width: 300px;">
+        <div class="position"></div>
+        <div class="zoom" style="margin-top: 3em;"></div>
+        <div class="rgb" style="margin-top: 3em;"></div>
+        <div class="colorstats" style="margin-top: 3em;"></div>
+        <div class="colorquery" style="margin-top: 3em;"></div>
+        <div id="plothist"></div>
+    </div>
+    <div id="openseadragon1" style="float: right; width: 380px; height: 500px; background: black;"></div>
+</div>
+</p>
+
+    <script>
+
+//===============================================================
+// viewer
+//===============================================================
+
+    var positionEl = document.querySelectorAll('.info .position')[0];
+    //positionEl.innerHTML = 'hello there';
+    var zoomEl = document.querySelectorAll('.info .zoom')[0];
+    //zoomEl.innerHTML = 'zoom this';
+    var rgbEl = document.querySelectorAll('.info .rgb')[0];
+
+    var updateZoom = function() {
+        var zoom = viewer.viewport.getZoom(true);
+        zoomEl.innerHTML = 'Zoom:<br>' + (Math.round(zoom * 100) / 100);
+    }
+
+    var openHandler = function() {
+      var tracker = new OpenSeadragon.MouseTracker({
+        element: viewer.container,
+        moveHandler: function(event) {
+            var webPoint = event.position;
+            var viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+            var vworld = viewer.world;
+            for (var i = 0; i < vworld.getItemCount(); ++i) {
+              var img = vworld.getItemAt(i);
+              var rect = img.getBounds(true); // rect in viewport coordinates
+              if (rect.containsPoint(viewportPoint)) {
+                var imagePoint = img.viewportToImageCoordinates(viewportPoint);
+                positionEl.innerHTML = 'Web:<br>' + webPoint.toString() + 
+                    '<br><br>Viewport:<br>' + viewportPoint.toString() +
+                    '<br><br>Item:<br>' + i +
+                    '<br><br>Image:<br>' + imagePoint.toString();
+                break;
+              }
+              positionEl.innerHTML = 'Web:<br>' + webPoint.toString() + 
+                  '<br><br>Viewport:<br>' + viewportPoint.toString();
+            }
+            updateZoom();     
+        }
+      });  
+
+      tracker.setTracking(true);  
+
+      viewer.addHandler('animation', updateZoom);   
+      //viewer.addHandler('viewport-change', function() { console.log('viewport-change raised'); });
+      //viewer.addHandler('update-viewport', function() { console.log('update-viewport raised'); });
+      viewer.addHandler('animation', function() { console.log('- animation event raised'); });
+      viewer.addHandler('animation-start', function() { console.log('- animation-start raised'); });
+      viewer.addHandler('animation-finish', function() { console.log('- animation-finish raised'); });
+
+      viewer.addHandler('zoom', function(ev) { console.log('- zoom raised: ' + ev.zoom); });
+
+      viewer.addHandler('tile-loaded', function(obj) {
+        let tl = obj.tile;
+        console.log('- tile-loaded level=' + tl.level + ' x=' + tl.x +
+                    ' y=' + tl.y + ' image=' + obj.image);
+        let sb = tl.sourceBounds;
+        if (sb) {
+          console.log('  - sourceBounds x=' + sb.x + ' y=' + sb.y +
+                      ' w=' + sb.width + ' h=' + sb.height);
+        }
+      });
+
+      viewer.addHandler('tile-drawing', function(obj) {
+        let tl = obj.tile;
+        console.log('- tile-drawing level=' + tl.level + ' x=' + tl.x +
+                    ' y=' + tl.y);
+        let sb = tl.sourceBounds;
+        if (sb) {
+          console.log('  - sourceBounds x=' + sb.x + ' y=' + sb.y +
+                      ' w=' + sb.width + ' h=' + sb.height);
+        }
+      });
+    }
+
+    var viewer = OpenSeadragon({
+        id: "openseadragon1",
+        prefixUrl: "openseadragon/images/",
+        showNavigator: true,
+        crossOriginPolicy: true,
+        maxZoomPixelRatio: 4,
+        debugMode: true
+      });
+
+    viewer.navigator.setFilterOptions = viewer.setFilterOptions;
+
+    openHandler();
+
+    viewer.addTiledImage({
+        tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S00_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
+        x: 0.0, y: 0.0, width: 1.0
+        //success: function() { }
+      });
+
+    // simple auto-scale filter
+    var simpleAutoScaleFilter = function(context, callback) {
+      console.log('simpleAutoScaleFilter wxh=' + context.canvas.width + 'x' + context.canvas.height);
+      const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+      const pxl = imgData.data;
+      const nhist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
+      const nstretch = nhist.makeStretcher(ColorStretch.colormaps.gray);
+      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, nstretch);
+      context.putImageData(imgData, 0, 0);
+      callback();
+    };
+
+    var histAutoScaleFilter = function(context, callback) {
+      console.log('histAutoScaleFilter wxh=' + context.canvas.width + 'x' + context.canvas.height);
+      const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
+      const pxl = imgData.data;
+      //console.log('  pxl start ' + pxl[0] + ' ' + pxl[1] + ' ' + pxl[2] + ' ' + pxl[3]);
+      const hist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
+      const stretch = hist.makeStretcher(ColorStretch.colormaps.gray);
+      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretch);
+      context.putImageData(imgData, 0, 0);
+
+      // histogram of pixel values, excluding zeroes
+      let xy = new Array(hist.nbins());
+      let j = 0;
+      let nu = 0;
+      let no = 0;
+      let sum = 0;
+      let num = 0;
+      for (let i = 0; i < hist.nbins(); i++) {
+        const x = hist.xlo + i * hist.dx();
+        sum += hist.data[i] * x;
+        num += hist.data[i];
+        if (x >= (1<<18)) {
+          no += hist.data[i];
+        } else if (x > 261200) {
+          xy[j++] = new Array(x, hist.data[i]);
+        } else {
+          nu += hist.data[i];
+        }
+      }
+      //console.log('  mean=' + (sum/num) + ' underflow=' + nu + ' overflow=' + no);
+      let a = xy.slice(0, j);
+      const plt = Plot.line(a).plot();
+      let plothist = document.getElementById("plothist");
+      if (plothist) plothist.replaceChildren(plt);
+
+      callback();
+    };
+
+    var zoomAutoScaleFilter = function(context, callback) {
+      console.log('zoomAutoScaleFilter');
+      histAutoScaleFilter(context, callback);
+    };
+
+    // scale pixels and draw corresponding colorbar and histogram.
+    // (Unfortunately, it seems the processor isn't called every time the image
+    // is zoomed; I suspect the images are cached. As a result, the histogram
+    // doesn't always get updated, so the histogram may not reflect the
+    // current viewport.)
+    viewer.setFilterOptions({
+      filters: { processors: histAutoScaleFilter }
+    });
+
+    // scale pixels for the navigator.
+    // Omit drawing the colorbar and histogram.
+    viewer.navigator.setFilterOptions({
+      filters: { processors: simpleAutoScaleFilter }
+    });
+
+    // also tried animation-finish, but it was called as many times as zoom
+    viewer.addHandler('zoom', function(ev) {
+      console.log('ZOOM EVENT zoom=' + ev.zoom + ' x,y=' + ev.refPoint +
+                  ' numitems=' + ev.eventSource.world.getItemCount());
+      viewer.setFilterOptions({
+        filters: { processors: zoomAutoScaleFilter }
+      });
+    });
+
+    </script>
+    <noscript>
+      <p>OpenSeadragon not available unless JS enabled</p>
+    </noscript>
+</div>
+
+</body>
+</html>
