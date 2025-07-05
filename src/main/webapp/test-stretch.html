@@ -92,7 +92,7 @@
       viewer.addHandler('animation', updateZoom);   
       viewer.addHandler('tile-drawing', function(ev) { console.log('tile-drawing'); });
       viewer.addHandler('tile-loaded', function(ev) { console.log('tile-loaded'); });
-      viewer.addHandler('animation-finished', function(ev) { console.log('animation-finished'); });
+      viewer.addHandler('animation-finish', function(ev) { console.log('animation-finish'); });
     }
 
     var viewer = OpenSeadragon({
@@ -108,15 +108,17 @@
 
     openHandler();
 
+/*
     viewer.addTiledImage({
         tileSource: "http://localhost:8172/iiif/3/testd$source=direct$colorMap=null/info.json",
         x: 0.0, y: 0.0, width: 1.0
       });
+*/
 
-    //viewer.addTiledImage({
-    //    tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S00_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
-    //    x: 0.0, y: 0.0, width: 1.0
-    //  });
+    viewer.addTiledImage({
+        tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S00_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
+        x: 0.0, y: 0.0, width: 1.0
+      });
 
     // simple auto-scale filter
     var simpleAutoScaleFilter = function(context, callback) {
