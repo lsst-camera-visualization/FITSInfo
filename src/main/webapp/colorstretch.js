@@ -251,6 +251,13 @@ var ColorStretch = {};
     // bin width
     dx: function() { return (this.xhi - this.xlo) / this.data.length; },
 
+    // number of entries
+    sum: function() {
+      let s = 0;
+      for (let i = 0; i < this.data.length; i++) s += this.data[i];
+      return s;
+    },
+
     //-------------------------------------------------------------
     // fill histogram
     //   x = (number or array of numbers) values to fill

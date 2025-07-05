@@ -1,16 +1,16 @@
 <html>
 <head>
-<title>Test Attempt at One Stretch</title>
+<title>Test with State</title>
 <link rel='stylesheet' type='text/css' media='screen'
       href='https://openseadragon.github.io/css/style.css' />
 <script src="openseadragon/openseadragon.js"></script>
-<script src="openseadragon-filtering.js"></script>
-<script src="colorstretch.js"></script>
 <script src="d3.min.js"></script>
 <script src="plot.min.js"></script>
+<script src="openseadragon-filtering-lsst.js"></script>
+<script src="colorstretch.js"></script>
 </head>
 <body>
-<h1>Test attempt at one stretch</h1>
+<h1>Test with state</h1>
 
 <div id="container">
 <div style="padding: 0 1.5em; height: 600px;">
@@ -29,26 +29,17 @@
     <script>
 
 //
-// this started out as an attempt to accumulate pixel values
-// into one histogram for the auto-stretch calculation,
-// and it's sort of successful at that.  There are no obvious
-// seams anymore (which were artifacts of having 4 tiles, each
-// with a separate auto-stretch colormap).  Intermediate zoom
-// steps also use the last stretch function rather than always
-// recalculating, which can slow the animation down quite a bit.
+// responses to actions:
+// - zoom:  set overall state to "accumulate".
+//          set filter processor to accumulate.
+// - animation-finish:  if in "accumulate", set to "new-stretch".
+//                      if in "new-stretch", set to "old-stretch"
+//                      set filter processor to stretch.
 //
-// But lately it's been more of an attempt to understand the
-// sequence of events being raised as the image is zoomed.
-// Some observations:
-// 1. when zooming, osd makes a series of switches between the
-//    original and final zoom levels, with the zoom event
-//    raised each time.
-// 2. when you try to go back to the original zoom level,
-//    osd asks for a couple of the tiles, but not all of them,
-//    which is why the histogram is incomplete and looks quite
-//    different from the way you started.  If you click home
-//    twice, you do get back to the original histogram.
-//
+
+// NEEDS PATCHED OPENSEADRAGON-FILTERING.JS.
+// Otherwise this will get the zoom levels mixed up when
+// making the pixel value histograms needed for auto-scaling.
 
 //===============================================================
 // viewer
@@ -93,29 +84,17 @@
       tracker.setTracking(true);  
 
       viewer.addHandler('animation', updateZoom);   
-      //viewer.addHandler('animation-start', function() { console.log('- animation-start raised'); });
-      //viewer.addHandler('animation-finish', function() { console.log('- animation-finish raised'); });
 
       viewer.addHandler('tile-loaded', function(obj) {
         let tl = obj.tile;
         console.log('- tile-loaded level=' + tl.level + ' x=' + tl.x +
                     ' y=' + tl.y + ' image=' + obj.image);
-        let sb = tl.sourceBounds;
-        if (sb) {
-          console.log('  - sourceBounds x=' + sb.x + ' y=' + sb.y +
-                      ' w=' + sb.width + ' h=' + sb.height);
-        }
       });
 
       viewer.addHandler('tile-drawing', function(obj) {
         let tl = obj.tile;
         console.log('- tile-drawing level=' + tl.level + ' x=' + tl.x +
                     ' y=' + tl.y);
-        let sb = tl.sourceBounds;
-        if (sb) {
-          console.log('  - sourceBounds x=' + sb.x + ' y=' + sb.y +
-                      ' w=' + sb.width + ' h=' + sb.height);
-        }
       });
     }
 
@@ -141,6 +120,7 @@
     // simple auto-scale filter
     var simpleAutoScaleFilter = function(context, callback) {
       console.log('simpleAutoScaleFilter wxh=' + context.canvas.width + 'x' + context.canvas.height);
+      if (context.zoomlevel) console.log('  zoomlevel=' + context.zoomlevel);
       const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
       const pxl = imgData.data;
       const nhist = ColorStretch.filter.accumulate(pxl, ColorStretch.decoders.raw);
@@ -150,39 +130,63 @@
       callback();
     };
 
-    // filter which accumulates histogram
-    var accdata = new Array(1 << 18);
-    var acchist = new ColorStretch.Histogram(accdata, 0, 1<<18);
+    // state (for each level):
+    // 0 = accumulate histogram, use old stretch if exists
+    // 1 = make new stretch function, use it
+    // 2 = use old stretch function
+    var state = [];
+
+    // accumulator array of Array(1<<18)
+    var accdata = [];
+    // histogram array of ColorStretch.Histogram(accdata[level], 0, 1<<18);
+    var acchist = [];
 
     // persistent ColorStretch object
-    var lastTileZoomLevel = 0;
     var lastStretch = null;
 
     var histAccumulatorFilter = function(context, callback) {
-      console.log('histAccumulatorFilter wxh=' + context.canvas.width + 'x' + context.canvas.height);
+      console.log('histAccumulatorFilter state=' + state[context.zoomlevel] +
+                  ' zoomlevel=' + context.zoomlevel +
+                  ' wxh=' + context.canvas.width + 'x' + context.canvas.height);
       const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
       const pxl = imgData.data;
-      ColorStretch.filter.fill(acchist, pxl, ColorStretch.decoders.raw);
+ 
+      const level = context.zoomlevel;
+      if (!(level in acchist)) {
+        state[level] = 0;
+        accdata[level] = new Array(1 << 18);
+        for (let i = 0; i < accdata[level].length; i++) accdata[level][i] = 0;
+        acchist[level] = new ColorStretch.Histogram(accdata[level], 0, 1<<18);
+      }
+      ColorStretch.filter.fill(acchist[level], pxl, ColorStretch.decoders.raw);
+      console.log('  hist sum = ' + acchist[level].sum());
 
       // apply last ColorStretch
-      if (lastStretch) {
-        ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
-        context.putImageData(imgData, 0, 0);
+      if (lastStretch == null) {
+        lastStretch = acchist[level].makeStretcher(ColorStretch.colormaps.gray);
       }
+      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
+      context.putImageData(imgData, 0, 0);
       callback();
     }
 
     // filter which applies accumulated histogram for auto-scale
     var histAutoScaleFilter = function(context, callback) {
-      console.log('histAutoScaleFilter wxh=' + context.canvas.width + 'x' + context.canvas.height);
+      console.log('histAutoScaleFilter state=' + state[context.zoomlevel] +
+                  ' zoomlevel=' + context.zoomlevel +
+                  ' wxh=' + context.canvas.width + 'x' + context.canvas.height);
       const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
       const pxl = imgData.data;
-      lastStretch = acchist.makeStretcher(ColorStretch.colormaps.gray);
+
+      console.log('  hist sum = ' + acchist[context.zoomlevel].sum());
+
+      if (state[context.zoomlevel] == 1) lastStretch = acchist[context.zoomlevel].makeStretcher(ColorStretch.colormaps.gray);
+      state[context.zoomlevel] = 2;
       ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
       context.putImageData(imgData, 0, 0);
 
       // histogram of pixel values, excluding zeroes
-      let hist = acchist.trim();
+      let hist = acchist[context.zoomlevel].trim();
       let xy = new Array(hist.nbins());
       let j = 0;
       let nu = 0;
@@ -229,24 +233,17 @@
     // zoom should be raised when zoom level changed.
     viewer.addHandler('zoom', function(ev) {
       console.log('- zoom called with ' + ev.zoom);
-      acchist.reset();
+      for (i in state) state[i] = 0;
+      for (i in accdata) delete accdata[i];
+      for (i in acchist) delete acchist[i]; // does Histogram need a cleanup method?
       viewer.setFilterOptions({
         filters: { processors: histAccumulatorFilter }
       });
     });
 
-    viewer.addHandler('tile-drawing', function(ev) {
-      const level = ev.tile.level;
-      if (level != lastTileZoomLevel) {
-        console.log('tile zoom level changed from ' + lastTileZoomLevel +
-                    ' to ' + level);
-        lastTileZoomLevel = level;
-        //acchist.reset();
-      }
-    });
-
     viewer.addHandler('animation-finish', function(ev) {
       console.log('- animation-finish called');
+      for (i in state) state[i] = 1;
       viewer.setFilterOptions({
         filters: { processors: histAutoScaleFilter }
       });
