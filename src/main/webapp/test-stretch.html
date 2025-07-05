@@ -18,12 +18,18 @@
         <div class="position"></div>
         <div class="zoom" style="margin-top: 3em;"></div>
         <div class="rgb" style="margin-top: 3em;"></div>
+        D3/Plot histogram:
+        <div id="plothist"></div>
         <div class="colorstats" style="margin-top: 3em;"></div>
         <div class="colorquery" style="margin-top: 3em;"></div>
-        <div id="plothist"></div>
     </div>
     <div id="openseadragon1" style="float: right; width: 380px; height: 500px; background: black;"></div>
 </div>
+</p>
+<br>
+
+<p> Color histogram:<br>
+<canvas id="colorbar" width="700" height="250" style="border:1px solid grey"></canvas>
 </p>
 
     <script>
@@ -84,18 +90,9 @@
       tracker.setTracking(true);  
 
       viewer.addHandler('animation', updateZoom);   
-
-      viewer.addHandler('tile-loaded', function(obj) {
-        let tl = obj.tile;
-        console.log('- tile-loaded level=' + tl.level + ' x=' + tl.x +
-                    ' y=' + tl.y + ' image=' + obj.image);
-      });
-
-      viewer.addHandler('tile-drawing', function(obj) {
-        let tl = obj.tile;
-        console.log('- tile-drawing level=' + tl.level + ' x=' + tl.x +
-                    ' y=' + tl.y);
-      });
+      viewer.addHandler('tile-drawing', function(ev) { console.log('tile-drawing'); });
+      viewer.addHandler('tile-loaded', function(ev) { console.log('tile-loaded'); });
+      viewer.addHandler('animation-finished', function(ev) { console.log('animation-finished'); });
     }
 
     var viewer = OpenSeadragon({
@@ -112,10 +109,14 @@
     openHandler();
 
     viewer.addTiledImage({
-        tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S00_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
+        tileSource: "http://localhost:8172/iiif/3/testd$source=direct$colorMap=null/info.json",
         x: 0.0, y: 0.0, width: 1.0
-        //success: function() { }
       });
+
+    //viewer.addTiledImage({
+    //    tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S00_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
+    //    x: 0.0, y: 0.0, width: 1.0
+    //  });
 
     // simple auto-scale filter
     var simpleAutoScaleFilter = function(context, callback) {
@@ -144,6 +145,11 @@
     // persistent ColorStretch object
     var lastStretch = null;
 
+    // colormap
+    ColorStretch.colormaps.underflow = [0, 0, 255, 255];
+    ColorStretch.colormaps.overflow = [255, 0, 0, 255];
+    const cmap = ColorStretch.colormaps.saoA;
+
     var histAccumulatorFilter = function(context, callback) {
       console.log('histAccumulatorFilter state=' + state[context.zoomlevel] +
                   ' zoomlevel=' + context.zoomlevel +
@@ -162,9 +168,7 @@
       console.log('  hist sum = ' + acchist[level].sum());
 
       // apply last ColorStretch
-      if (lastStretch == null) {
-        lastStretch = acchist[level].makeStretcher(ColorStretch.colormaps.gray);
-      }
+      if (lastStretch == null) lastStretch = acchist[level].makeStretcher(cmap);
       ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
       context.putImageData(imgData, 0, 0);
       callback();
@@ -178,15 +182,37 @@
       const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
       const pxl = imgData.data;
 
-      console.log('  hist sum = ' + acchist[context.zoomlevel].sum());
+      const level = context.zoomlevel;
+      //console.log('  hist sum = ' + acchist[level].sum());
 
-      if (state[context.zoomlevel] == 1) lastStretch = acchist[context.zoomlevel].makeStretcher(ColorStretch.colormaps.gray);
-      state[context.zoomlevel] = 2;
+      if (state[level] == 1) {
+        lastStretch = acchist[level].makeStretcher(cmap);
+        // render custom colorbar histogram
+        const chist = acchist[level].trim(200000);
+        const renderer = new ColorStretch.Renderer(chist, 700, 250, 0.1, 0.25);
+        renderer.logy = false; // linear y scale for histogram
+        const colorbar = document.getElementById("colorbar");
+        const ctx = colorbar.getContext("2d");
+        // draw the histogram and colorbar
+        renderer.draw(ctx, lastStretch);
+        // add a mouse listener for histogram
+        colorbar.addEventListener('mousemove', function(e) {
+          let cq = document.querySelectorAll('.info .colorquery')[0];
+          let d = renderer.info(e.offsetX);
+          if (d.valid) {
+            cq.innerHTML = "Value=" + d.value + " counts=" + d.counts;
+          } else {
+            cq.innerHTML = "";
+          }
+        });
+      }
+      state[level] = 2;
+
       ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
       context.putImageData(imgData, 0, 0);
 
       // histogram of pixel values, excluding zeroes
-      let hist = acchist[context.zoomlevel].trim();
+      let hist = acchist[level].trim();
       let xy = new Array(hist.nbins());
       let j = 0;
       let nu = 0;
@@ -214,22 +240,12 @@
       callback();
     };
 
-    // scale pixels and draw corresponding colorbar and histogram.
-    // (Unfortunately, it seems the processor isn't called every time the image
-    // is zoomed; I suspect the images are cached. As a result, the histogram
-    // doesn't always get updated, so the histogram may not reflect the
-    // current viewport.)
-    //viewer.setFilterOptions({
-    //  filters: { processors: histAccumulatorFilter }
-    //});
-
     // scale pixels for the navigator.
     // Omit drawing the colorbar and histogram.
     viewer.navigator.setFilterOptions({
       filters: { processors: simpleAutoScaleFilter }
     });
 
-    // also tried animation-finish, but it was called as many times as zoom.
     // zoom should be raised when zoom level changed.
     viewer.addHandler('zoom', function(ev) {
       console.log('- zoom called with ' + ev.zoom);
