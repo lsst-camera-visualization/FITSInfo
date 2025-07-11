@@ -117,8 +117,14 @@
 
     viewer.addTiledImage({
         tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S00_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
+        x: 0.0, y: 0.0, width: 0.5
+      });
+/*
+    viewer.addTiledImage({
+        tileSource: "http://localhost:8172/iiif/3/post_isr_image_LSSTCam_r_57_MC_O_20250511_000866_R22_S01_LSSTCam_runs_quickLook_3$source=direct$colorMap=null/info.json",
         x: 0.0, y: 0.0, width: 1.0
       });
+*/
 
     // simple auto-scale filter
     var simpleAutoScaleFilter = function(context, callback) {
@@ -143,6 +149,9 @@
     var accdata = [];
     // histogram array of ColorStretch.Histogram(accdata[level], 0, 1<<18);
     var acchist = [];
+
+    // number of TiledImage objects which have been loaded since zoom init
+    var numLoaded = 0;
 
     // persistent ColorStretch object
     var lastStretch = null;
@@ -207,37 +216,37 @@
             cq.innerHTML = "";
           }
         });
+
+        // EXAMPLE D3/PLOT CODE
+        // histogram of pixel values, excluding zeroes
+        let hist = acchist[level].trim();
+        let xy = new Array(hist.nbins());
+        let j = 0;
+        let nu = 0;
+        let no = 0;
+        let sum = 0;
+        let num = 0;
+        for (let i = 0; i < hist.nbins(); i++) {
+          const x = hist.xlo + i * hist.dx();
+          sum += hist.data[i] * x;
+          num += hist.data[i];
+          if (x >= (1<<18)) {
+            no += hist.data[i];
+          } else if (x > 261200) {
+            xy[j++] = new Array(x, hist.data[i]);
+          } else {
+            nu += hist.data[i];
+          }
+        }
+        let a = xy.slice(0, j);
+        const plt = Plot.line(a).plot();
+        let plothist = document.getElementById("plothist");
+        if (plothist) plothist.replaceChildren(plt);
       }
       state[level] = 2;
 
       ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
       context.putImageData(imgData, 0, 0);
-
-      // histogram of pixel values, excluding zeroes
-      let hist = acchist[level].trim();
-      let xy = new Array(hist.nbins());
-      let j = 0;
-      let nu = 0;
-      let no = 0;
-      let sum = 0;
-      let num = 0;
-      for (let i = 0; i < hist.nbins(); i++) {
-        const x = hist.xlo + i * hist.dx();
-        sum += hist.data[i] * x;
-        num += hist.data[i];
-        if (x >= (1<<18)) {
-          no += hist.data[i];
-        } else if (x > 261200) {
-          xy[j++] = new Array(x, hist.data[i]);
-        } else {
-          nu += hist.data[i];
-        }
-      }
-      //console.log('  mean=' + (sum/num) + ' underflow=' + nu + ' overflow=' + no);
-      let a = xy.slice(0, j);
-      const plt = Plot.line(a).plot();
-      let plothist = document.getElementById("plothist");
-      if (plothist) plothist.replaceChildren(plt);
 
       callback();
     };
@@ -251,6 +260,7 @@
     // zoom should be raised when zoom level changed.
     viewer.addHandler('zoom', function(ev) {
       console.log('- zoom called with ' + ev.zoom);
+      numLoaded = 0;
       for (i in state) state[i] = 0;
       for (i in accdata) delete accdata[i];
       for (i in acchist) delete acchist[i]; // does Histogram need a cleanup method?
@@ -259,12 +269,38 @@
       });
     });
 
-    viewer.addHandler('animation-finish', function(ev) {
-      console.log('- animation-finish called');
-      for (i in state) state[i] = 1;
-      viewer.setFilterOptions({
-        filters: { processors: histAutoScaleFilter }
+    // let's see if we can listen to TiledImage objects for fully-loaded-change
+    var worldItems = [];
+    viewer.world.addHandler('add-item', function(ev) {
+      console.log('- world add-item, num=' + worldItems.length);
+      // check it hasn't been added before
+      for (it in worldItems) {
+        if (it == ev.item) return;
+      }
+      worldItems.push(ev.item);
+      // add fully-loaded-change listener
+      ev.item.addHandler('fully-loaded-change', function(ev) {
+        if (numLoaded < 0) return;
+        numLoaded += 1; // TODO:  delicate test!
+        console.log('- fully-loaded-change, images=' + worldItems.length +
+                    ' numLoaded=' + numLoaded);
+        if (numLoaded == worldItems.length) {
+          console.log('all loaded');
+          for (i in state) state[i] = 1;
+          numLoaded = -999;
+          viewer.setFilterOptions({
+            filters: { processors: histAutoScaleFilter }
+          });
+        }
       });
+    });
+
+    viewer.world.addHandler('remove-item', function(ev) {
+      console.log('- world remove-item, num=' + worldItems.length);
+      for (let i = 0; i < worldItems.length; i++) {
+        if (worldItems[i] == ev.item) worldItems.splice(i, i+1);
+      }
+      console.log('  after removal num=' + worldItems.length);
     });
 
     </script>
