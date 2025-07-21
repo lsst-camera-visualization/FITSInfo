@@ -151,15 +151,55 @@
     var acchist = [];
 
     // number of TiledImage objects which have been loaded since zoom init
-    var numLoaded = 0;
-
-    // persistent ColorStretch object
-    var lastStretch = null;
+    // (per level)
+    //var numLoaded = 0;
 
     // colormap
     ColorStretch.colormaps.underflow = [0, 0, 255, 255];
     ColorStretch.colormaps.overflow = [255, 0, 0, 255];
     const cmap = ColorStretch.colormaps.saoA;
+
+    // persistent ColorStretch objects
+    var lastStretch = [];
+
+    var findStretch = function(level, cmap) {
+      console.log('findStretch level=' + level);
+      if (lastStretch[level]) {
+        console.log('  -> found stretch at this level');
+        return lastStretch[level];
+      }
+      if (acchist[level]) {
+        console.log('  -> found histogram at this level');
+        return acchist[level].makeStretcher(cmap);
+      }
+      // search among higher zoom levels
+      for (let i = level+1; i < lastStretch.length; i++) {
+        if (lastStretch[i]) {
+          console.log('  -> found stretch at level ' + i);
+          return lastStretch[i];
+        }
+      }
+      for (let i = level+1; i < acchist.length; i++) {
+        if (acchist[i]) {
+          console.log('  -> found histogram at level ' + i);
+          return acchist[i].makeStretcher(cmap);
+        }
+      }
+      for (let i = level-1; i >= 0; i--) {
+        if (lastStretch[i]) {
+          console.log('  -> found stretch at level ' + i);
+          return lastStretch[i];
+        }
+      }
+      for (let i = level-1; i >= 0; i--) {
+        if (acchist[i]) {
+          console.log('  -> found histogram at level ' + i);
+          return acchist[i].makeStretcher(cmap);
+        }
+      }
+      console.log('  no lastStretch nor acchist');
+      return null; // no stretch or histogram at all
+    }
 
     var histAccumulatorFilter = function(context, callback) {
       console.log('histAccumulatorFilter state=' + state[context.zoomlevel] +
@@ -178,9 +218,9 @@
       ColorStretch.filter.fill(acchist[level], pxl, ColorStretch.decoders.raw);
       console.log('  hist sum = ' + acchist[level].sum());
 
-      // apply last ColorStretch
-      if (lastStretch == null) lastStretch = acchist[level].makeStretcher(cmap);
-      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
+      // apply last ColorStretch for this zoom level
+      lastStretch[level] = findStretch(level, cmap);
+      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch[level]);
       context.putImageData(imgData, 0, 0);
       callback();
     }
@@ -196,8 +236,12 @@
       const level = context.zoomlevel;
       //console.log('  hist sum = ' + acchist[level].sum());
 
-      if (state[level] == 1) {
-        lastStretch = acchist[level].makeStretcher(cmap);
+      if (!(level in state) || state[level] == 0) {
+        histAccumulatorFilter(context, callback);
+
+      } else if (state[level] == 1) {
+        //lastStretch = acchist[level].makeStretcher(cmap);
+        lastStretch[level] = findStretch(level, cmap)
         // render custom colorbar histogram
         const chist = acchist[level].trim(200000);
         const renderer = new ColorStretch.Renderer(chist, 700, 250, 0.1, 0.25);
@@ -205,7 +249,7 @@
         const colorbar = document.getElementById("colorbar");
         const ctx = colorbar.getContext("2d");
         // draw the histogram and colorbar
-        renderer.draw(ctx, lastStretch);
+        renderer.draw(ctx, lastStretch[level]);
         // add a mouse listener for histogram
         colorbar.addEventListener('mousemove', function(e) {
           let cq = document.querySelectorAll('.info .colorquery')[0];
@@ -242,10 +286,11 @@
         const plt = Plot.line(a).plot();
         let plothist = document.getElementById("plothist");
         if (plothist) plothist.replaceChildren(plt);
-      }
-      state[level] = 2;
 
-      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
+        state[level] = 2;
+      }
+
+      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch[level]);
       context.putImageData(imgData, 0, 0);
 
       callback();
@@ -260,7 +305,7 @@
     // zoom should be raised when zoom level changed.
     viewer.addHandler('zoom', function(ev) {
       console.log('- zoom called with ' + ev.zoom);
-      numLoaded = 0;
+      //numLoaded = 0;
       for (i in state) state[i] = 0;
       for (i in accdata) delete accdata[i];
       for (i in acchist) delete acchist[i]; // does Histogram need a cleanup method?
@@ -269,38 +314,50 @@
       });
     });
 
-    // let's see if we can listen to TiledImage objects for fully-loaded-change
-    var worldItems = [];
-    viewer.world.addHandler('add-item', function(ev) {
-      console.log('- world add-item, num=' + worldItems.length);
-      // check it hasn't been added before
-      for (it in worldItems) {
-        if (it == ev.item) return;
-      }
-      worldItems.push(ev.item);
-      // add fully-loaded-change listener
-      ev.item.addHandler('fully-loaded-change', function(ev) {
-        if (numLoaded < 0) return;
-        numLoaded += 1; // TODO:  delicate test!
-        console.log('- fully-loaded-change, images=' + worldItems.length +
-                    ' numLoaded=' + numLoaded);
-        if (numLoaded == worldItems.length) {
-          console.log('all loaded');
-          for (i in state) state[i] = 1;
-          numLoaded = -999;
-          viewer.setFilterOptions({
-            filters: { processors: histAutoScaleFilter }
-          });
-        }
-      });
-    });
+    var loadChangeHandler = function(ev) {
+      // it looks as if condition for successful load is
+      // that tilesMatrix entry exists (is a Tile),
+      // and coverage[level][x][y] is true, for all x,y at given level.
+      // TilesImage.getFullyLoaded() seems to be true if any of
+      // the above are true, for any (?) level.
 
-    viewer.world.addHandler('remove-item', function(ev) {
-      console.log('- world remove-item, num=' + worldItems.length);
-      for (let i = 0; i < worldItems.length; i++) {
-        if (worldItems[i] == ev.item) worldItems.splice(i, i+1);
+      let loaded = [];
+      let covered = [];
+      for (let i = 0; i < viewer.world.getItemCount(); i++) {
+        const ti = viewer.world.getItemAt(i);
+        if (!ti.getFullyLoaded()) return; // not fully loaded yet
+        // if fully loaded, find out which levels are loaded
+        for (let lvl in ti.loadingCoverage) {
+          if (!(lvl in state)) break;
+          if (lvl in loaded) loaded[lvl] = true;
+          for (k1 in ti.loadingCoverage[lvl])
+            for (k2 in ti.loadingCoverage[lvl][k1])
+              loaded[lvl] = loaded[lvl] && ti.loadingCoverage[lvl][k1][k2];
+          if (lvl in covered) covered[lvl] = true;
+          for (k1 in ti.coverage[lvl])
+            for (k2 in ti.coverage[lvl][k1])
+              covered[lvl] = covered[lvl] && ti.coverage[lvl][k1][k2];
+        }
       }
-      console.log('  after removal num=' + worldItems.length);
+      let apply = false;
+      for (let lvl in loaded) {
+        if (loaded[lvl] && covered[lvl]) {
+          state[lvl] = 1;
+          apply = true;
+        }
+      }
+
+      if (apply) {
+        // all TiledImages fully loaded
+        viewer.setFilterOptions({
+          filters: { processors: histAutoScaleFilter }
+        });
+      }
+    };
+
+    viewer.world.addHandler('add-item', function(ev) {
+      const ti = ev.item;
+      ti.addHandler('fully-loaded-change', loadChangeHandler);
     });
 
     </script>
