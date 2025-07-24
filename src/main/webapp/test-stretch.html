@@ -139,178 +139,150 @@
       callback();
     };
 
-    // state (for each level):
-    // 0 = accumulate histogram, use old stretch if exists
-    // 1 = make new stretch function, use it
-    // 2 = use old stretch function
-    var state = [];
-
-    // accumulator array of Array(1<<18)
-    var accdata = [];
-    // histogram array of ColorStretch.Histogram(accdata[level], 0, 1<<18);
-    var acchist = [];
-
-    // number of TiledImage objects which have been loaded since zoom init
-    // (per level)
-    //var numLoaded = 0;
-
-    // colormap
-    ColorStretch.colormaps.underflow = [0, 0, 255, 255];
-    ColorStretch.colormaps.overflow = [255, 0, 0, 255];
-    const cmap = ColorStretch.colormaps.saoA;
-
-    // persistent ColorStretch objects
-    var lastStretch = [];
-
-    var findStretch = function(level, cmap) {
-      console.log('findStretch level=' + level);
-      if (lastStretch[level]) {
-        console.log('  -> found stretch at this level');
-        return lastStretch[level];
-      }
-      if (acchist[level]) {
-        console.log('  -> found histogram at this level');
-        return acchist[level].makeStretcher(cmap);
-      }
-      // search among higher zoom levels
-      for (let i = level+1; i < lastStretch.length; i++) {
-        if (lastStretch[i]) {
-          console.log('  -> found stretch at level ' + i);
-          return lastStretch[i];
-        }
-      }
-      for (let i = level+1; i < acchist.length; i++) {
-        if (acchist[i]) {
-          console.log('  -> found histogram at level ' + i);
-          return acchist[i].makeStretcher(cmap);
-        }
-      }
-      for (let i = level-1; i >= 0; i--) {
-        if (lastStretch[i]) {
-          console.log('  -> found stretch at level ' + i);
-          return lastStretch[i];
-        }
-      }
-      for (let i = level-1; i >= 0; i--) {
-        if (acchist[i]) {
-          console.log('  -> found histogram at level ' + i);
-          return acchist[i].makeStretcher(cmap);
-        }
-      }
-      console.log('  no lastStretch nor acchist');
-      return null; // no stretch or histogram at all
-    }
-
-    var histAccumulatorFilter = function(context, callback) {
-      console.log('histAccumulatorFilter state=' + state[context.zoomlevel] +
-                  ' zoomlevel=' + context.zoomlevel +
-                  ' wxh=' + context.canvas.width + 'x' + context.canvas.height);
-      const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
-      const pxl = imgData.data;
- 
-      const level = context.zoomlevel;
-      if (!(level in acchist)) {
-        state[level] = 0;
-        accdata[level] = new Array(1 << 18);
-        for (let i = 0; i < accdata[level].length; i++) accdata[level][i] = 0;
-        acchist[level] = new ColorStretch.Histogram(accdata[level], 0, 1<<18);
-      }
-      ColorStretch.filter.fill(acchist[level], pxl, ColorStretch.decoders.raw);
-      console.log('  hist sum = ' + acchist[level].sum());
-
-      // apply last ColorStretch for this zoom level
-      lastStretch[level] = findStretch(level, cmap);
-      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch[level]);
-      context.putImageData(imgData, 0, 0);
-      callback();
-    }
-
-    // filter which applies accumulated histogram for auto-scale
-    var histAutoScaleFilter = function(context, callback) {
-      console.log('histAutoScaleFilter state=' + state[context.zoomlevel] +
-                  ' zoomlevel=' + context.zoomlevel +
-                  ' wxh=' + context.canvas.width + 'x' + context.canvas.height);
-      const imgData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
-      const pxl = imgData.data;
-
-      const level = context.zoomlevel;
-      //console.log('  hist sum = ' + acchist[level].sum());
-
-      if (!(level in state) || state[level] == 0) {
-        histAccumulatorFilter(context, callback);
-
-      } else if (state[level] == 1) {
-        //lastStretch = acchist[level].makeStretcher(cmap);
-        lastStretch[level] = findStretch(level, cmap)
-        // render custom colorbar histogram
-        const chist = acchist[level].trim(200000);
-        const renderer = new ColorStretch.Renderer(chist, 700, 250, 0.1, 0.25);
-        renderer.logy = false; // linear y scale for histogram
-        const colorbar = document.getElementById("colorbar");
-        const ctx = colorbar.getContext("2d");
-        // draw the histogram and colorbar
-        renderer.draw(ctx, lastStretch[level]);
-        // add a mouse listener for histogram
-        colorbar.addEventListener('mousemove', function(e) {
-          let cq = document.querySelectorAll('.info .colorquery')[0];
-          let d = renderer.info(e.offsetX);
-          if (d.valid) {
-            cq.innerHTML = "Value=" + d.value + " counts=" + d.counts;
-          } else {
-            cq.innerHTML = "";
-          }
-        });
-
-        // EXAMPLE D3/PLOT CODE
-        // histogram of pixel values, excluding zeroes
-        let hist = acchist[level].trim();
-        let xy = new Array(hist.nbins());
-        let j = 0;
-        let nu = 0;
-        let no = 0;
-        let sum = 0;
-        let num = 0;
-        for (let i = 0; i < hist.nbins(); i++) {
-          const x = hist.xlo + i * hist.dx();
-          sum += hist.data[i] * x;
-          num += hist.data[i];
-          if (x >= (1<<18)) {
-            no += hist.data[i];
-          } else if (x > 261200) {
-            xy[j++] = new Array(x, hist.data[i]);
-          } else {
-            nu += hist.data[i];
-          }
-        }
-        let a = xy.slice(0, j);
-        const plt = Plot.line(a).plot();
-        let plothist = document.getElementById("plothist");
-        if (plothist) plothist.replaceChildren(plt);
-
-        state[level] = 2;
-      }
-
-      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch[level]);
-      context.putImageData(imgData, 0, 0);
-
-      callback();
-    };
-
     // scale pixels for the navigator.
     // Omit drawing the colorbar and histogram.
     viewer.navigator.setFilterOptions({
       filters: { processors: simpleAutoScaleFilter }
     });
 
+    // state (for each level):
+    // 0 (or undefined) = need to create new histogram
+    // 1 = accumulate histogram, use old stretch if exists
+    // 2 = make new stretch function, use it
+    // 3 = use old stretch function
+    var state = [];
+
+    // accumulator array of Array(1<<18)
+    var accdata = [];
+    // histogram array of ColorStretch.Histogram(accdata[level], 0, 1<<18);
+    var acchist = [];
+    // persistent ColorStretch objects for each level
+    var stretch = [];
+
+    // colormap
+    ColorStretch.colormaps.underflow = [0, 0, 255, 255];
+    ColorStretch.colormaps.overflow = [255, 0, 0, 255];
+    const cmap = ColorStretch.colormaps.saoA;
+
+    var drawColorbarHistogram = function(chist, stretcher) {
+      const renderer = new ColorStretch.Renderer(chist, 700, 250, 0.1, 0.25);
+      renderer.logy = false; // linear y scale for histogram
+      const colorbar = document.getElementById("colorbar");
+      const ctx = colorbar.getContext("2d");
+      // draw the histogram and colorbar
+      renderer.draw(ctx, stretcher);
+      // add a mouse listener for histogram
+      colorbar.addEventListener('mousemove', function(e) {
+        let cq = document.querySelectorAll('.info .colorquery')[0];
+        let d = renderer.info(e.offsetX);
+        if (d.valid) {
+          cq.innerHTML = "Value=" + d.value + " counts=" + d.counts;
+        } else {
+          cq.innerHTML = "";
+        }
+      });
+    };
+
+    // EXAMPLE D3/PLOT CODE
+    // histogram of pixel values, excluding zeroes
+    var drawD3Histogram = function(chist) {
+      let xy = new Array(chist.nbins());
+      let j = 0;
+      let nu = 0;
+      let no = 0;
+      let sum = 0;
+      let num = 0;
+      for (let i = 0; i < chist.nbins(); i++) {
+        const x = chist.xlo + i * chist.dx();
+        sum += chist.data[i] * x;
+        num += chist.data[i];
+        if (x >= (1<<18)) {
+          no += chist.data[i];
+        } else if (x > 261200) {
+          xy[j++] = new Array(x, chist.data[i]);
+        } else {
+          nu += chist.data[i];
+        }
+      }
+      let a = xy.slice(0, j);
+      const plt = Plot.line(a).plot();
+      let plothist = document.getElementById("plothist");
+      if (plothist) plothist.replaceChildren(plt);
+    };
+
+    // filter which accumulates and/or draws for auto-scale
+    var autoScaleFilter = function(context, callback) {
+      console.log('autoScaleFilter level=' + context.zoomlevel +
+                  ' state=' + state[context.zoomlevel]);
+      const imgData = context.getImageData(0, 0, context.canvas.width,
+                                                 context.canvas.height);
+      const pxl = imgData.data;
+      const level = context.zoomlevel;
+
+      if (!state[level]) {
+        const asize = (1 << 18);
+        state[level] = 1;
+        accdata[level] = new Array(asize);
+        for (let i = 0; i < asize; i++) accdata[level][i] = 0;
+        acchist[level] = new ColorStretch.Histogram(accdata[level], 0, asize);
+      }
+
+      if (state[level] == 3) {
+        // do nothing
+      } else if (state[level] == 1) {
+        ColorStretch.filter.fill(acchist[level], pxl,
+                                 ColorStretch.decoders.raw);
+        // wait for fully-loaded-change(status) to change state to 2
+      } else if (state[level] == 2) {
+        stretch[level] = acchist[level].makeStretcher(cmap);
+        // draw histograms
+        const chist = acchist[level].trim(200000);
+        drawColorbarHistogram(chist, stretch[level]);
+        drawD3Histogram(chist);
+        // now just use this stretch function
+        state[level] = 3;
+      }
+
+      let stretcher = null;
+      if (stretch[level]) {
+        stretcher = stretch[level];
+      } else {
+        // search among higher stretch levels
+        for (let i = level+1; i < stretch.length; i++) {
+          if (stretch[i]) {
+            stretcher = stretch[i];
+            break;
+          }
+        }
+        if (!stretcher) {
+          for (let i = level-1; i >= 0; i--) {
+            if (stretch[i]) {
+              stretcher = stretch[i];
+              break;
+            }
+          }
+        }
+      }
+
+      // if can't find an old stretch, make it with what we have
+      if (!stretcher) {
+        stretch[level] = acchist[level].makeStretcher(cmap);
+        stretcher = stretch[level];
+      }
+
+      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretcher);
+      context.putImageData(imgData, 0, 0);
+      callback();
+    };
+
     // zoom should be raised when zoom level changed.
     viewer.addHandler('zoom', function(ev) {
       console.log('- zoom called with ' + ev.zoom);
-      //numLoaded = 0;
       for (i in state) state[i] = 0;
       for (i in accdata) delete accdata[i];
       for (i in acchist) delete acchist[i]; // does Histogram need a cleanup method?
       viewer.setFilterOptions({
-        filters: { processors: histAccumulatorFilter }
+        filters: { processors: autoScaleFilter }
       });
     });
 
@@ -321,36 +293,51 @@
       // TilesImage.getFullyLoaded() seems to be true if any of
       // the above are true, for any (?) level.
 
+      console.log('fully-loaded-change');
       let loaded = [];
       let covered = [];
       for (let i = 0; i < viewer.world.getItemCount(); i++) {
         const ti = viewer.world.getItemAt(i);
+        console.log('  item ' + i + ' fully loaded: ' + ti.getFullyLoaded());
         if (!ti.getFullyLoaded()) return; // not fully loaded yet
         // if fully loaded, find out which levels are loaded
         for (let lvl in ti.loadingCoverage) {
+          console.log('  level ' + lvl);
           if (!(lvl in state)) break;
-          if (lvl in loaded) loaded[lvl] = true;
-          for (k1 in ti.loadingCoverage[lvl])
-            for (k2 in ti.loadingCoverage[lvl][k1])
+          if (state[lvl] == 3) break;
+          if (!(lvl in loaded)) loaded[lvl] = true;
+          for (k1 in ti.loadingCoverage[lvl]) {
+            console.log('    x ' + k1);
+            for (k2 in ti.loadingCoverage[lvl][k1]) {
+              console.log('      y ' + k2 +
+                          ' loaded ' + ti.loadingCoverage[lvl][k1][k2]);
               loaded[lvl] = loaded[lvl] && ti.loadingCoverage[lvl][k1][k2];
-          if (lvl in covered) covered[lvl] = true;
-          for (k1 in ti.coverage[lvl])
-            for (k2 in ti.coverage[lvl][k1])
+            }
+          }
+          if (!(lvl in covered)) covered[lvl] = true;
+          for (k1 in ti.coverage[lvl]) {
+            console.log('    x ' + k1);
+            for (k2 in ti.coverage[lvl][k1]) {
+              console.log('      y ' + k2 +
+                          ' covered ' + ti.coverage[lvl][k1][k2]);
               covered[lvl] = covered[lvl] && ti.coverage[lvl][k1][k2];
+            }
+          }
         }
       }
       let apply = false;
       for (let lvl in loaded) {
         if (loaded[lvl] && covered[lvl]) {
-          state[lvl] = 1;
+          state[lvl] = 2;
           apply = true;
+          console.log('  level ' + lvl + ' loaded');
         }
       }
 
       if (apply) {
-        // all TiledImages fully loaded
+        // all TiledImages fully loaded - reset and redraw
         viewer.setFilterOptions({
-          filters: { processors: histAutoScaleFilter }
+          filters: { processors: autoScaleFilter }
         });
       }
     };
