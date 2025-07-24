@@ -170,6 +170,7 @@
       const colorbar = document.getElementById("colorbar");
       const ctx = colorbar.getContext("2d");
       // draw the histogram and colorbar
+      ctx.clearRect(0, 0, 700, 250);
       renderer.draw(ctx, stretcher);
       // add a mouse listener for histogram
       colorbar.addEventListener('mousemove', function(e) {
@@ -302,7 +303,7 @@
         if (!ti.getFullyLoaded()) return; // not fully loaded yet
         // if fully loaded, find out which levels are loaded
         for (let lvl in ti.loadingCoverage) {
-          console.log('  level ' + lvl);
+          console.log('  level ' + lvl + ' state ' + state[lvl]);
           if (!(lvl in state)) break;
           if (state[lvl] == 3) break;
           if (!(lvl in loaded)) loaded[lvl] = true;
