@@ -347,12 +347,12 @@ var ColorStretch = {};
             ndata[j] = 0;
           }
         }
-        console.log('rebin: old xlo=' + this.xlo + ' xhi=' + this.xhi +
-                    ' nb=' + this.nbins());
-        console.log('rebin: factor=' + factor + ' nb=' + nb +
-                    ' olddx=' + olddx);
-        console.log('rebin: xlo=' + this.xlo + ' xwidth=' + xwidth +
-                    ' new nbins=' + ndata.length);
+        //console.log('rebin: old xlo=' + this.xlo + ' xhi=' + this.xhi +
+        //            ' nb=' + this.nbins());
+        //console.log('rebin: factor=' + factor + ' nb=' + nb +
+        //            ' olddx=' + olddx);
+        //console.log('rebin: xlo=' + this.xlo + ' xwidth=' + xwidth +
+        //            ' new nbins=' + ndata.length);
         nh = new $.Histogram(ndata, this.xlo, this.xlo + xwidth)
         return nh;
       }
@@ -386,8 +386,9 @@ var ColorStretch = {};
       //console.log('trim: dx=' + d +
       //            ' new xlo=' + (this.xlo+ilo*d) +
       //            ' xhi=' + (this.xlo+ihi*d));
-      return new $.Histogram(this.data.slice(ilo, ihi),
-                             this.xlo + ilo*d, this.xlo + ihi*d);
+      const ndata = new Array(ihi - ilo);
+      for (let i = ilo; i < ihi; i++) ndata[i-ilo] = this.data[i];
+      return new $.Histogram(ndata, this.xlo + ilo*d, this.xlo + ihi*d);
     },
 
     //-------------------------------------------------------------
@@ -443,14 +444,14 @@ var ColorStretch = {};
         this.gm[i] = v[1];
         this.bm[i] = v[2];
       }
-      return (function(cs) {
+      return (function(cs, hist) {
         return function(v) {
-          if (v < cs.xlo) return $.colormaps.underflow;
-          if (v >= cs.xhi) return $.colormaps.overflow;
-          const i = ((v - cs.xlo) / cs.dx()) | 0;
+          if (v < hist.xlo) return $.colormaps.underflow;
+          if (v >= hist.xhi) return $.colormaps.overflow;
+          const i = ((v - hist.xlo) / hist.dx()) | 0;
           return [ cs.rm[i], cs.gm[i], cs.bm[i], 255 ];
         }
-      })(this);
+      })(this, sh);
     }
 
   };
@@ -496,7 +497,7 @@ var ColorStretch = {};
     this.xbase = width - this.histw;
 
     this.hist = hist.trim().rebin(this.histw); // trim and rebin for rendering
- }
+  }
 
   $.Renderer.prototype = {
 

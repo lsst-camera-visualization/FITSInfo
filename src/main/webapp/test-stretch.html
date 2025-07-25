@@ -166,7 +166,7 @@
 
     var drawColorbarHistogram = function(chist, stretcher) {
       const renderer = new ColorStretch.Renderer(chist, 700, 250, 0.1, 0.25);
-      renderer.logy = false; // linear y scale for histogram
+      renderer.logy = true; // linear y scale for histogram
       const colorbar = document.getElementById("colorbar");
       const ctx = colorbar.getContext("2d");
       // draw the histogram and colorbar
@@ -246,11 +246,13 @@
 
       let stretcher = null;
       if (stretch[level]) {
+        console.log('found stretcher at right level ' + level);
         stretcher = stretch[level];
       } else {
         // search among higher stretch levels
         for (let i = level+1; i < stretch.length; i++) {
           if (stretch[i]) {
+            console.log('found stretcher at upper level ' + i);
             stretcher = stretch[i];
             break;
           }
@@ -258,6 +260,7 @@
         if (!stretcher) {
           for (let i = level-1; i >= 0; i--) {
             if (stretch[i]) {
+              console.log('found stretcher at lower level ' + i);
               stretcher = stretch[i];
               break;
             }
@@ -269,6 +272,7 @@
       if (!stretcher) {
         stretch[level] = acchist[level].makeStretcher(cmap);
         stretcher = stretch[level];
+        console.log('no stretcher, so make temporary one at leve ' + level);
       }
 
       ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretcher);
@@ -287,6 +291,12 @@
       });
     });
 
+    viewer.addHandler('animation-finish', function(ev) {
+      viewer.setFilterOptions({
+        filters: { processors: autoScaleFilter, loadMode: 'sync' }
+      });
+    });
+
     var loadChangeHandler = function(ev) {
       // it looks as if condition for successful load is
       // that tilesMatrix entry exists (is a Tile),
@@ -299,28 +309,28 @@
       let covered = [];
       for (let i = 0; i < viewer.world.getItemCount(); i++) {
         const ti = viewer.world.getItemAt(i);
-        console.log('  item ' + i + ' fully loaded: ' + ti.getFullyLoaded());
+        //console.log('  item ' + i + ' fully loaded: ' + ti.getFullyLoaded());
         if (!ti.getFullyLoaded()) return; // not fully loaded yet
         // if fully loaded, find out which levels are loaded
         for (let lvl in ti.loadingCoverage) {
-          console.log('  level ' + lvl + ' state ' + state[lvl]);
+          //console.log('  level ' + lvl + ' state ' + state[lvl]);
           if (!(lvl in state)) break;
           if (state[lvl] == 3) break;
           if (!(lvl in loaded)) loaded[lvl] = true;
           for (k1 in ti.loadingCoverage[lvl]) {
-            console.log('    x ' + k1);
+            //console.log('    x ' + k1);
             for (k2 in ti.loadingCoverage[lvl][k1]) {
-              console.log('      y ' + k2 +
-                          ' loaded ' + ti.loadingCoverage[lvl][k1][k2]);
+              //console.log('      y ' + k2 +
+              //            ' loaded ' + ti.loadingCoverage[lvl][k1][k2]);
               loaded[lvl] = loaded[lvl] && ti.loadingCoverage[lvl][k1][k2];
             }
           }
           if (!(lvl in covered)) covered[lvl] = true;
           for (k1 in ti.coverage[lvl]) {
-            console.log('    x ' + k1);
+            //console.log('    x ' + k1);
             for (k2 in ti.coverage[lvl][k1]) {
-              console.log('      y ' + k2 +
-                          ' covered ' + ti.coverage[lvl][k1][k2]);
+              //console.log('      y ' + k2 +
+              //            ' covered ' + ti.coverage[lvl][k1][k2]);
               covered[lvl] = covered[lvl] && ti.coverage[lvl][k1][k2];
             }
           }
@@ -331,14 +341,14 @@
         if (loaded[lvl] && covered[lvl]) {
           state[lvl] = 2;
           apply = true;
-          console.log('  level ' + lvl + ' loaded');
+          //console.log('  level ' + lvl + ' loaded');
         }
       }
 
       if (apply) {
         // all TiledImages fully loaded - reset and redraw
         viewer.setFilterOptions({
-          filters: { processors: autoScaleFilter }
+          filters: { processors: autoScaleFilter, loadMode: 'sync' }
         });
       }
     };
