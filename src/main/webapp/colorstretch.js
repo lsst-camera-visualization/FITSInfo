@@ -258,6 +258,9 @@ var ColorStretch = {};
       return s;
     },
 
+    // low edge of x bin, given index
+    xLowEdge: function(index) { return this.xlo + index * this.dx(); },
+
     //-------------------------------------------------------------
     // fill histogram
     //   x = (number or array of numbers) values to fill
@@ -356,6 +359,24 @@ var ColorStretch = {};
         nh = new $.Histogram(ndata, this.xlo, this.xlo + xwidth)
         return nh;
       }
+    },
+
+    //-------------------------------------------------------------
+    // return low edge of first bin with contents
+    //-------------------------------------------------------------
+    getXMinFilled: function(xstart=0) {
+      let i = xstart;
+      while (i < this.data.length && this.data[i] == 0) i += 1;
+      return this.xLowEdge(i);
+    },
+
+    //-------------------------------------------------------------
+    // return low edge of last bin with zero contents
+    //-------------------------------------------------------------
+    getXMaxFilled: function() {
+      let i = this.data.length - 1;
+      while (i >= 0 && this.data[i] == 0) i -= 1;
+      return this.xLowEdge(i + 1);
     },
 
     //-------------------------------------------------------------

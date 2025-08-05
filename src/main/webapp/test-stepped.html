@@ -145,32 +145,6 @@
       filters: { processors: simpleAutoScaleFilter }
     });
 
-    // use the last stretch (or if no last stretch, the first available)
-    // for all filtering during zoom.
-    // after the zoom animation is done,
-    //   check if the new stretch has greater range than last stretch.
-    //   if so, filter with new stretch.
-    //     Then fade in new image over ~1 second.
-    //     If fade-in is interrupted, snap in new image.
-    //     Also update color histograms.
-    //   if not, do nothing - continue use of last stretch.
-
-    // last ColorStretch function
-    var lastStretch = null;
-    var lastXlo = 1<<18;
-    var lastXhi = 0;
-
-    // still need to accumulate on several levels at once.
-    // accumulator array of Array(1<<18)
-    var accdata = [];
-    // histogram array of ColorStretch.Histogram(accdata[level], 0, 1<<18);
-    var acchist = [];
-
-
-
-
-
-
     // colormap
     ColorStretch.colormaps.underflow = [0, 0, 255, 255];
     ColorStretch.colormaps.overflow = [255, 0, 0, 255];
@@ -223,9 +197,32 @@
       if (plothist) plothist.replaceChildren(plt);
     };
 
+    // use the last stretch (or if no last stretch, the first available)
+    // for all filtering during zoom.
+    // after the zoom animation is done,
+    //   check if the new stretch has greater range than last stretch.
+    //   if so, filter with new stretch.
+    //     Then fade in new image over ~1 second.
+    //     If fade-in is interrupted, snap in new image.
+    //     Also update color histograms.
+    //   if not, do nothing - continue use of last stretch.
+
+    // last ColorStretch function
+    var lastStretch = null;
+    var lastXlo = 1<<18;
+    var lastXhi = 0;
+
+    // still need to accumulate on several levels at once.
+    // accumulator array of Array(1<<18)
+    var accdata = [];
+    // histogram array of ColorStretch.Histogram(accdata[level], 0, 1<<18);
+    var acchist = [];
+
+    // flag to indicate a full redraw has already been done
+    var fulldrawn = false;
+
     var accumulateFilter = function(context, callback) {
-      console.log('accumulateFilter level=' + context.zoomlevel +
-                  ' state=' + state[context.zoomlevel]);
+      console.log('accumulateFilter level=' + context.zoomlevel);
       const imgData = context.getImageData(0, 0, context.canvas.width,
                                                  context.canvas.height);
       const pxl = imgData.data;
@@ -242,7 +239,13 @@
       // if can't find an old stretch, make it with what we have
       if (!lastStretch) {
         lastStretch = acchist[level].makeStretcher(cmap);
-        console.log('no stretcher, so make temporary one at leve ' + level);
+        lastXlo = acchist[level].getXMinFilled(1); // omit 0 bin
+        lastXhi = acchist[level].getXMaxFilled();
+        console.log('no stretcher, so make temporary one at level ' + level);
+        console.log('  xlo=' + lastXlo + ' xhi=' + lastXhi);
+        const chist = acchist[level].trim(200000);
+        drawColorbarHistogram(chist, lastStretch);
+        drawD3Histogram(chist);
       }
 
       ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
@@ -250,94 +253,55 @@
       callback();
     };
 
-
-
-
-
-
-    // filter which accumulates and/or draws for auto-scale
-    var autoScaleFilter = function(context, callback) {
-      console.log('autoScaleFilter level=' + context.zoomlevel +
-                  ' state=' + state[context.zoomlevel]);
-      const imgData = context.getImageData(0, 0, context.canvas.width,
-                                                 context.canvas.height);
-      const pxl = imgData.data;
-      const level = context.zoomlevel;
-
-      if (!state[level]) {
-        const asize = (1 << 18);
-        state[level] = 1;
-        accdata[level] = new Array(asize);
-        for (let i = 0; i < asize; i++) accdata[level][i] = 0;
-        acchist[level] = new ColorStretch.Histogram(accdata[level], 0, asize);
-      }
-
-      if (state[level] == 3) {
-        // do nothing
-      } else if (state[level] == 1) {
-        ColorStretch.filter.fill(acchist[level], pxl,
-                                 ColorStretch.decoders.raw);
-        // wait for fully-loaded-change(status) to change state to 2
-      } else if (state[level] == 2) {
-        stretch[level] = acchist[level].makeStretcher(cmap);
-        // draw histograms
+    // filter which applies last stretch
+    var redrawFilter = function(context, callback) {
+      console.log('redrawFilter level=' + context.zoomlevel);
+      console.log('  fulldrawn=' + fulldrawn);
+      if (!fulldrawn) {
+        const imgData = context.getImageData(0, 0, context.canvas.width,
+                                                   context.canvas.height);
+        const pxl = imgData.data;
+        const level = context.zoomlevel;
+        ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, lastStretch);
+        context.putImageData(imgData, 0, 0);
         const chist = acchist[level].trim(200000);
-        drawColorbarHistogram(chist, stretch[level]);
+        drawColorbarHistogram(chist, lastStretch);
         drawD3Histogram(chist);
-        // now just use this stretch function
-        state[level] = 3;
+        fulldrawn = true;
       }
-
-      let stretcher = null;
-      if (stretch[level]) {
-        console.log('found stretcher at right level ' + level);
-        stretcher = stretch[level];
-      } else {
-        // search among higher stretch levels
-        for (let i = level+1; i < stretch.length; i++) {
-          if (stretch[i]) {
-            console.log('found stretcher at upper level ' + i);
-            stretcher = stretch[i];
-            break;
-          }
-        }
-        if (!stretcher) {
-          for (let i = level-1; i >= 0; i--) {
-            if (stretch[i]) {
-              console.log('found stretcher at lower level ' + i);
-              stretcher = stretch[i];
-              break;
-            }
-          }
-        }
-      }
-
-      // if can't find an old stretch, make it with what we have
-      if (!stretcher) {
-        stretch[level] = acchist[level].makeStretcher(cmap);
-        stretcher = stretch[level];
-        console.log('no stretcher, so make temporary one at leve ' + level);
-      }
-
-      ColorStretch.filter.apply(pxl, ColorStretch.decoders.raw, stretcher);
-      context.putImageData(imgData, 0, 0);
       callback();
     };
 
     // zoom should be raised when zoom level changed.
     viewer.addHandler('zoom', function(ev) {
       console.log('- zoom called with ' + ev.zoom);
-      for (i in state) state[i] = 0;
       for (i in accdata) delete accdata[i];
       for (i in acchist) delete acchist[i]; // does Histogram need a cleanup method?
+      fulldrawn = false;
       viewer.setFilterOptions({
-        filters: { processors: autoScaleFilter }
+        filters: { processors: accumulateFilter }
       });
     });
 
+    // for now, we'll just do an immediate re-filter,
+    // rather than animate it.  Just to test.
     viewer.addHandler('animation-finish', function(ev) {
+      let uselevel = -1;
+      for (i in acchist) {
+        const xlo = acchist[i].getXMinFilled();
+        const xhi = acchist[i].getXMaxFilled();
+        if (xlo > lastXlo || xhi < lastXhi) continue;
+        if (xlo == lastXlo && xhi == lastXhi) continue;
+        // found a broader colormap
+        uselevel = i;
+        lastXlo = xlo;
+        lastXhi = xhi;
+      }
+      if (uselevel < 0) return; // do nothing if stretch is already ok
+      console.log('Make new stretch function, level=' + uselevel);
+      lastStretch = acchist[uselevel].makeStretcher(cmap);
       viewer.setFilterOptions({
-        filters: { processors: autoScaleFilter, loadMode: 'sync' }
+        filters: { processors: redrawFilter }
       });
     });
 
@@ -358,8 +322,6 @@
         // if fully loaded, find out which levels are loaded
         for (let lvl in ti.loadingCoverage) {
           //console.log('  level ' + lvl + ' state ' + state[lvl]);
-          if (!(lvl in state)) break;
-          if (state[lvl] == 3) break;
           if (!(lvl in loaded)) loaded[lvl] = true;
           for (k1 in ti.loadingCoverage[lvl]) {
             //console.log('    x ' + k1);
@@ -383,7 +345,6 @@
       let apply = false;
       for (let lvl in loaded) {
         if (loaded[lvl] && covered[lvl]) {
-          state[lvl] = 2;
           apply = true;
           //console.log('  level ' + lvl + ' loaded');
         }
@@ -391,9 +352,9 @@
 
       if (apply) {
         // all TiledImages fully loaded - reset and redraw
-        viewer.setFilterOptions({
-          filters: { processors: autoScaleFilter, loadMode: 'sync' }
-        });
+        //viewer.setFilterOptions({
+        //  filters: { processors: redrawFilter }
+        //});
       }
     };
 
