@@ -213,6 +213,9 @@ var ColorStretch = {};
   //
   // The horizontal axis of the histogram is the pixel value,
   // and the vertical axis the number of pixels with that value.
+  //
+  // Note some limitations:  we assume x >= 0 (no negative pixels
+  // values), and that bin contents are also non-negative.
   //===============================================================
 
   //---------------------------------------------------------------
@@ -440,29 +443,6 @@ var ColorStretch = {};
       for (let i = ilo; i < ihi; i++) ndata[i-ilo] = this.data[i];
       return new $.Histogram(ndata, this.xlo + ilo*d, this.xlo + ihi*d);
     },
-
-    //-------------------------------------------------------------
-    // trim lower fraction
-    //-------------------------------------------------------------
-    trimLowerFraction: function(frac) {
-      let cs = new Array(this.nbins());
-      let sum = 0;
-      for (let i = 0; i < this.nbins(); i++) {
-        sum += this.data[i];
-        cs[i] = sum;
-      }
-      let threshold = frac * sum;
-      for (let i = 0; i < this.nbins(); i++) {
-        if (cs[i] > threshold) {
-          return this.trim(xstart=i);
-        }
-      }
-      return this;
-    },
-
-    //-------------------------------------------------------------
-    // trim lower fraction and neighboring points (needs pixels again)
-    //-------------------------------------------------------------
 
     //-------------------------------------------------------------
     // return a stretcher function derived from the cdf.

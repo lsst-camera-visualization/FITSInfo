@@ -16,6 +16,12 @@
 <div style="padding: 0 1.5em; height: 600px;">
     <div class="info" style="float: left; width: 300px;">
       <div class="menus" style="float: left; width: 300px;">
+      <label for="minv">Min:</label>
+      <input type="number" id="minv" name="minv">
+      <br>
+      <label for="maxv">Max:</label>
+      <input type="number" id="maxv" name="maxv">
+      <br>
       <select name="cmap" id="cmap">
         <option value="gray">Gray</option>
         <option value="standard">Standard</option>
@@ -23,10 +29,6 @@
         <option value="saoB">SAO B</option>
         <option value="saoBB">SAO BB</option>
       </select>
-      <label for="minv">Min:</label>
-      <input type="number" id="minv" name="minv">
-      <label for="maxv">Max:</label>
-      <input type="number" id="maxv" name="maxv">
       <button type='button' id='restretch'>Restretch</button>
       </div>
         <div class="position"></div>
@@ -48,16 +50,7 @@
 
     <script>
 
-//
-// responses to actions:
-// - zoom:  set overall state to "accumulate".
-//          set filter processor to accumulate.
-// - animation-finish:  if in "accumulate", set to "new-stretch".
-//                      if in "new-stretch", set to "old-stretch"
-//                      set filter processor to stretch.
-//
-
-// NEEDS PATCHED OPENSEADRAGON-FILTERING.JS.
+// NEEDS PATCHED openseadragon-filtering-lsst.js.
 // Otherwise this will get the zoom levels mixed up when
 // making the pixel value histograms needed for auto-scaling.
 
