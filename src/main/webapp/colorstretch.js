@@ -225,8 +225,6 @@ var ColorStretch = {};
     this.data = bins;
     this.xlo = xlo;
     this.xhi = xhi;
-    //console.log('new Histogram: xlo=' + xlo + ' xhi=' + xhi +
-    //            ' nbins=' + bins.length);
 
     // counters for associated stretcher function application
     this.underflows = 0;
@@ -372,12 +370,6 @@ var ColorStretch = {};
             ndata[j] = 0;
           }
         }
-        //console.log('rebin: old xlo=' + this.xlo + ' xhi=' + this.xhi +
-        //            ' nb=' + this.nbins());
-        //console.log('rebin: factor=' + factor + ' nb=' + nb +
-        //            ' olddx=' + olddx);
-        //console.log('rebin: xlo=' + this.xlo + ' xwidth=' + xwidth +
-        //            ' new nbins=' + ndata.length);
         nh = new $.Histogram(ndata, this.xlo, this.xlo + xwidth)
         return nh;
       }
@@ -437,9 +429,6 @@ var ColorStretch = {};
       if (ilo < 0) ilo = 0;
       let ihi = ((xstop - this.xlo) / d) | 0;
       if (xstop < 0) ihi = ((this.xhi + xstop - this.xlo) / d) | 0;
-      //console.log('trim: old xlo=' + this.xlo + ' xhi=' + this.xhi +
-      //            ' nb=' + this.data.length);
-      //console.log('trim: old ilo=' + ilo + ' ihi=' + ihi);
       while (this.data[ilo] == 0 && ilo < this.data.length) ilo += 1;
       if (ilo == this.data.length || ihi < ilo) {
         // empty histogram
@@ -447,14 +436,8 @@ var ColorStretch = {};
       }
       while (this.data[ihi] == 0) ihi -= 1; // don't need bound check here
       ihi += 1; // exclusive upper end
-      //console.log('trim: ilo=' + ilo + ' ihi=' + ihi);
-      //console.log('trim: dx=' + d +
-      //            ' new xlo=' + (this.xlo+ilo*d) +
-      //            ' xhi=' + (this.xlo+ihi*d));
       const ndata = new Array(ihi - ilo);
       for (let i = ilo; i < ihi; i++) ndata[i-ilo] = this.data[i];
-      //console.log(['trim: old[', ilo, ']=', this.data[ilo], ' new[', 0,
-      //            ']=', ndata[0]].join(''));
       return new $.Histogram(ndata, this.xlo + ilo*d, this.xlo + ihi*d);
     },
 
@@ -470,10 +453,7 @@ var ColorStretch = {};
       }
       let threshold = frac * sum;
       for (let i = 0; i < this.nbins(); i++) {
-        console.log('trimLowerFraction: i=' + i + ' cs[i]=' + cs[i]);
         if (cs[i] > threshold) {
-          console.log('trimLowerFraction(' + frac + '): threshold=' +
-                      threshold + ' cs[i]=' + cs[i] + ' xstart=' + i);
           return this.trim(xstart=i);
         }
       }
@@ -492,8 +472,6 @@ var ColorStretch = {};
     // usually for display purposes, not for actual color-mapping.
     //-------------------------------------------------------------
     makeStretcher: function(colormap) {
-      console.log("makeStretcher: xlo=" + this.xlo + " xhi=" + this.xhi +
-                  " nbins=" + this.nbins());
       const sh = this.trim(); // trim zero bins off sides
       let sum = 0;
       let a = new Array(sh.nbins());
@@ -593,8 +571,6 @@ var ColorStretch = {};
       for (let i = 0; i < n; i++) {
         const v = i * d + this.hist.xlo;
         const c = stretcher(v);
-        //console.log('horizontalBar: i=' + i + ' v=' + v +
-        //            ' r=' + c[0] + ' g=' + c[1] + ' b=' + c[2] + ' a=' + c[3]);
         const p = i * 4;
         pxl[p] = c[0];
         pxl[p+1] = c[1];
@@ -721,7 +697,6 @@ var ColorStretch = {};
       for (let i = 0; i < xtics.length; i++) {
         const v = xtics[i]; // pixel value (x axis)
         const x = this.getXCoordinate(v); // location on canvas
-        //console.log('horizontalAxis: x=' + v + ' xc=' + x);
         context.beginPath();
         context.moveTo(x, ytop);
         context.lineTo(x, ybottom);
@@ -768,7 +743,6 @@ var ColorStretch = {};
       }
 
       // horizontal axis (assume colorbar serves as line)
-      //console.log("horizontal axis dx=" + this.hist.dx());
       const xtics = this.hist.getXTics();
       const xtl = ((this.height - this.histh - barh - this.barSpacer) / 3) | 0;
       this.horizontalAxis(context, xtics,
