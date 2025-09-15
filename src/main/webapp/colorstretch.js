@@ -80,14 +80,14 @@ var ColorStretch = {};
   //---------------------------------------------------------------
 
   $.colormaps.gray = function(x) {
-    if (x < 0.0) return underflow;
-    if (x >= 1.0) return overflow;
+    if (x < 0.0) return $.colormaps.underflow;
+    if (x >= 1.0) return $.colormaps.overflow;
     const v = (256 * x) | 0;
     return [v, v, v, 255];
   };
 
   $.colormaps.saoA = function(x) {
-    if (x < 0.0) return underflow;
+    if (x < 0.0) return $.colormaps.underflow;
     else if (x < 1.0)
       return [ $.colormaps.interpolate(x, [0, 0.25, 0.5, 1],
                                           [0,    0,   1, 1]),
@@ -96,11 +96,11 @@ var ColorStretch = {};
                $.colormaps.interpolate(x, [0, 0.125, 0.5, 0.75, 1],
                                           [0,     0,   1,    0, 0]),
                255 ];
-    else return overflow;
+    else return $.colormaps.overflow;
   };
 
   $.colormaps.saoB = function(x) {
-    if (x < 0.0) return underflow;
+    if (x < 0.0) return $.colormaps.underflow;
     else if (x < 1.0)
       return [ $.colormaps.interpolate(x, [0, 0.25,  0.5, 1],
                                           [0,    0,    1, 1]),
@@ -109,11 +109,11 @@ var ColorStretch = {};
                $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75, 1],
                                           [0,    1,   0,    0, 1]),
                255 ];
-    else return overflow;
+    else return $.colormaps.overflow;
   };
 
   $.colormaps.saoBB = function(x) {
-    if (x < 0.0) return underflow;
+    if (x < 0.0) return $.colormaps.underflow;
     else if (x < 1.0)
       return [ $.colormaps.interpolate(x, [0, 0.5, 1],
                                           [0,   1, 1]),
@@ -122,11 +122,11 @@ var ColorStretch = {};
                $.colormaps.interpolate(x, [0, 0.5, 1],
                                           [0,   0, 1]),
                255 ];
-    else return overflow;
+    else return $.colormaps.overflow;
   };
 
   $.colormaps.standard = function(x) {
-    if (x < 0.0) return underflow;
+    if (x < 0.0) return $.colormaps.underflow;
     else if (x < 1.0)
       return [ $.colormaps.interpolate(x, [0, 0.333, 0.333, 0.666, 0.666, 1],
                                           [0, 0.3  , 0    , 0.3  , 0.3  , 1]),
@@ -135,7 +135,7 @@ var ColorStretch = {};
                $.colormaps.interpolate(x, [0, 0.333, 0.333, 0.666, 0.666, 1],
                                           [0, 1.0  , 0.0  , 0.3  , 0    , 0.3]),
                255 ];
-    else return overflow;
+    else return $.colormaps.overflow;
   };
 
   //===============================================================
@@ -227,6 +227,11 @@ var ColorStretch = {};
     this.xhi = xhi;
     //console.log('new Histogram: xlo=' + xlo + ' xhi=' + xhi +
     //            ' nbins=' + bins.length);
+
+    // counters for associated stretcher function application
+    this.underflows = 0;
+    this.overflows = 0;
+    this.valids = 0;
   }
 
   $.Histogram.prototype = {
@@ -261,22 +266,29 @@ var ColorStretch = {};
     // low edge of x bin, given index
     xLowEdge: function(index) { return this.xlo + index * this.dx(); },
 
+    // bin index to x conversion (same as xLowEdge)
+    bin2x: function(index) { return this.xLowEdge(index); },
+
+    // x to bin index conversion
+    x2bin: function(x) { return ((x - this.xlo) / this.dx()) | 0; },
+
     //-------------------------------------------------------------
     // fill histogram
     //   x = (number or array of numbers) values to fill
     // return value:  the histogram object
     //-------------------------------------------------------------
     fill: function(x) {
+      const rd = this.data.length / (this.xhi - this.xlo);
       if (x instanceof Array) {
         for (let j = 0; j < x.length; j++) {
           if (x[j] >= this.xlo && x[j] < this.xhi) {
-            const i = ((x[j]-this.xlo)*this.data.length/(this.xhi-this.xlo))|0;
+            const i = ((x[j]-this.xlo) * rd) | 0;
             this.data[i] += 1;
           }
         }
       } else {
         if (x >= this.xlo && x < this.xhi) {
-          const i = ((x-this.xlo)*this.data.length / (this.xhi-this.xlo))|0;
+          const i = ((x-this.xlo) * rd)|0;
           this.data[i] += 1;
         }
       }
@@ -299,6 +311,16 @@ var ColorStretch = {};
     //-------------------------------------------------------------
     reset: function() {
       for (let i = 0; i < this.data.length; i++) this.data[i] = 0;
+      return this;
+    },
+
+    //-------------------------------------------------------------
+    // clear counters
+    //-------------------------------------------------------------
+    clearCounters: function() {
+      this.underflows = 0;
+      this.overflows = 0;
+      this.valids = 0;
       return this;
     },
 
@@ -363,11 +385,13 @@ var ColorStretch = {};
 
     //-------------------------------------------------------------
     // return low edge of first bin with contents
+    //   xstart = starting pixel value
     //-------------------------------------------------------------
     getXMinFilled: function(xstart=0) {
-      let i = xstart;
+      let i = this.x2bin(xstart);
+      if (i < 0) i = 0;
       while (i < this.data.length && this.data[i] == 0) i += 1;
-      return this.xLowEdge(i);
+      return this.bin2x(i);
     },
 
     //-------------------------------------------------------------
@@ -376,7 +400,27 @@ var ColorStretch = {};
     getXMaxFilled: function() {
       let i = this.data.length - 1;
       while (i >= 0 && this.data[i] == 0) i -= 1;
-      return this.xLowEdge(i + 1);
+      return this.bin2x(i + 1);
+    },
+
+    //-------------------------------------------------------------
+    // return [low,high] indices of non-zero contents.
+    // this.data[low] and this.data[high] will both be non-zero.
+    //   xstart = starting x value
+    //   xstop = stopping x value, exclusive (upper edge of bin)
+    //-------------------------------------------------------------
+    getRange: function(xstart=0, xstop=-1) {
+      let ilo = this.x2bin(xstart);
+      if (ilo < 0) ilo = 0;
+      let ihi = (xstop < 0) ? this.x2bin(this.xhi + xstop) : this.x2bin(xstop);
+      if (ihi > this.data.length) ihi = this.data.length;
+      if (ihi <= ilo) return null;
+
+      while (this.data[ilo] == 0 && ilo < this.data.length) ilo += 1;
+      if (ilo == this.data.length || ihi < ilo) return null;
+      while (this.data[ihi] == 0) ihi -= 1; // don't need bound check
+      ihi += 1; // exclusive upper end
+      return [ this.bin2x(ilo), this.bin2x(ihi) ];
     },
 
     //-------------------------------------------------------------
@@ -409,6 +453,8 @@ var ColorStretch = {};
       //            ' xhi=' + (this.xlo+ihi*d));
       const ndata = new Array(ihi - ilo);
       for (let i = ilo; i < ihi; i++) ndata[i-ilo] = this.data[i];
+      //console.log(['trim: old[', ilo, ']=', this.data[ilo], ' new[', 0,
+      //            ']=', ndata[0]].join(''));
       return new $.Histogram(ndata, this.xlo + ilo*d, this.xlo + ihi*d);
     },
 
@@ -467,14 +513,26 @@ var ColorStretch = {};
       }
       return (function(cs, hist) {
         return function(v) {
-          if (v < hist.xlo) return $.colormaps.underflow;
-          if (v >= hist.xhi) return $.colormaps.overflow;
+          if (v < hist.xlo) {
+            cs.underflows += 1;
+            return $.colormaps.underflow;
+          }
+          if (v >= hist.xhi) {
+            cs.overflows += 1;
+            return $.colormaps.overflow;
+          }
+          cs.valids += 1;
           const i = ((v - hist.xlo) / hist.dx()) | 0;
           return [ cs.rm[i], cs.gm[i], cs.bm[i], 255 ];
         }
       })(this, sh);
-    }
+    },
 
+    resetStretcher: function() {
+      this.underflows = 0;
+      this.overflows = 0;
+      this.valids = 0;
+    }
   };
 
   //===============================================================
