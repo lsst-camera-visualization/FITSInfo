@@ -13,6 +13,8 @@
 /**
  *
  * @author Antoine Vandecreme <antoine.vandecreme@nist.gov>
+ *         Jeff Tseng <jeff.tseng@physics.ox.ac.uk>
+ *             (to add zoom level to canvas object passed to processors)
  */
 (function() {
 
@@ -88,6 +90,7 @@
                 canvas.height = image.height;
                 var context = canvas.getContext('2d');
                 context.drawImage(image, 0, 0);
+                context.zoomlevel = tile.level; // extends context
                 tile._renderedContext = context;
                 var callback = event.getCompletionCallback();
                 applyFilters(context, processors, callback);
@@ -169,7 +172,8 @@
                 delete tile._renderedContext;
                 delete tile._filterIncrement;
             }
-            applyFilters(rendered, processors);
+            rendered.zoomlevel = tile.level; // extends Tile. (Should be context?)
+            applyFilters(rendered, processors); // is this even the right signature?
             rendered._filterIncrement = self.filterIncrement;
         }
     };

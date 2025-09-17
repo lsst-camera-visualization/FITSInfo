@@ -32,6 +32,14 @@ var ColorStretch = {};
     return (r << 10) | (g << 2) | (b >> 6) | 0;
   }
 
+  //---------------------------------------------------------------
+  // 24-bit pixel values encoded in RGB fields
+  // (probably used if FITS file used floats)
+  //---------------------------------------------------------------
+  $.decoders.int24 = function(r, g, b, a) {
+    return (r << 16) | (g << 8) | b | 0;
+  }
+
 //=================================================================
 // colormaps:  functions which map scalar 0..1 to rgba.
 // Giving these functions a value < 0 returns the underflow array.
@@ -49,14 +57,18 @@ var ColorStretch = {};
   // utility function to linearly interpolate between fixed points
   //   x = input argument
   //   points = array of fixed points in x.  points[0] should be 0.
+  //     range 0..1
   //   values = array of values at the corresponding fixed points.
-  // return value:  scalar function value
+  //     range 0..1
+  // return value:  scalar function value, max 255
   //---------------------------------------------------------------
   $.colormaps.interpolate = function(x, points, values) {
     for (let i = 0; i < points.length; i++) {
       if (x < points[i]) {
-        return (values[i-1] + (values[i] - values[i-1]) *
-                (x - points[i-1]) / (points[i] - points[i-1])) | 0;
+        let v = values[i-1] + (values[i] - values[i-1]) *
+                (x - points[i-1]) / (points[i] - points[i-1]);
+        let vv = (256 * v) | 0;
+        return vv > 255 ? 255 : vv;
       }
     }
     // overflow
@@ -68,36 +80,127 @@ var ColorStretch = {};
   //---------------------------------------------------------------
 
   $.colormaps.gray = function(x) {
-    if (x < 0.0) return underflow;
-    if (x >= 1.0) return overflow;
+    if (x < 0.0) return $.colormaps.underflow;
+    if (x >= 1.0) return $.colormaps.overflow;
     const v = (256 * x) | 0;
     return [v, v, v, 255];
   };
 
   $.colormaps.saoA = function(x) {
-    if (x < 0.0) return underflow;
+    if (x < 0.0) return $.colormaps.underflow;
     else if (x < 1.0)
-      return [ $.colormaps.interpolate(x, [0, 0.25, 0.5,   1],
-                                          [0,    0, 255, 255]),
-               $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75,   1],
-                                          [0,  255,   0,    0, 255]),
+      return [ $.colormaps.interpolate(x, [0, 0.25, 0.5, 1],
+                                          [0,    0,   1, 1]),
+               $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75, 1],
+                                          [0,    1,   0,    0, 1]),
                $.colormaps.interpolate(x, [0, 0.125, 0.5, 0.75, 1],
-                                          [0,     0, 255,    0, 0]),
+                                          [0,     0,   1,    0, 0]),
                255 ];
-    else return overflow;
+    else return $.colormaps.overflow;
   };
 
   $.colormaps.saoB = function(x) {
-    if (x < 0.0) return underflow;
+    if (x < 0.0) return $.colormaps.underflow;
     else if (x < 1.0)
-      return [ $.colormaps.interpolate(x, [0, 0.25,  0.5,   1],
-                                          [0,    0,  255, 255]),
-               $.colormaps.interpolate(x, [0,  0.5, 0.75,   1],
-                                          [0,    0,  255, 255]),
-               $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75,   1],
-                                          [0,  255,   0,    0, 255]),
+      return [ $.colormaps.interpolate(x, [0, 0.25,  0.5, 1],
+                                          [0,    0,    1, 1]),
+               $.colormaps.interpolate(x, [0,  0.5, 0.75, 1],
+                                          [0,    0,    1, 1]),
+               $.colormaps.interpolate(x, [0, 0.25, 0.5, 0.75, 1],
+                                          [0,    1,   0,    0, 1]),
                255 ];
-    else return overflow;
+    else return $.colormaps.overflow;
+  };
+
+  $.colormaps.saoBB = function(x) {
+    if (x < 0.0) return $.colormaps.underflow;
+    else if (x < 1.0)
+      return [ $.colormaps.interpolate(x, [0, 0.5, 1],
+                                          [0,   1, 1]),
+               $.colormaps.interpolate(x, [0, 0.25, 0.75, 1],
+                                          [0,    0,    1, 1]),
+               $.colormaps.interpolate(x, [0, 0.5, 1],
+                                          [0,   0, 1]),
+               255 ];
+    else return $.colormaps.overflow;
+  };
+
+  $.colormaps.standard = function(x) {
+    if (x < 0.0) return $.colormaps.underflow;
+    else if (x < 1.0)
+      return [ $.colormaps.interpolate(x, [0, 0.333, 0.333, 0.666, 0.666, 1],
+                                          [0, 0.3  , 0    , 0.3  , 0.3  , 1]),
+               $.colormaps.interpolate(x, [0, 0.333, 0.333, 0.666, 0.666, 1],
+                                          [0, 0.3  , 0.3  , 1.0  , 0    , 0.3]),
+               $.colormaps.interpolate(x, [0, 0.333, 0.333, 0.666, 0.666, 1],
+                                          [0, 1.0  , 0.0  , 0.3  , 0    , 0.3]),
+               255 ];
+    else return $.colormaps.overflow;
+  };
+
+  //===============================================================
+  // axis tic utilities
+  //   w = width to subdivide
+  //   ndiv = target number of divisions
+  //===============================================================
+  $.axes = {};
+
+  //-------------------------------------------------------------
+  // truncate a value (usually a width) to a specified granularity
+  //   w = value to truncate
+  //   ndiv = target number of divisions
+  // return value:  the truncated value
+  //-------------------------------------------------------------
+  $.axes.truncate = function(w, ndiv) {
+    let n = w / ndiv; // initial bin width
+    let tens = 1;
+    while (n < 1) {
+      n *= 10;
+      tens /= 10;
+    }
+    while (n > 10) {
+      n /= 10;
+      tens *= 10;
+    }
+    n = (n | 0);
+    if (n > 5) n = 5;
+    else if (n > 2) n = 2;
+    return n*tens;
+  };
+
+  //-------------------------------------------------------------
+  // figure out how many tics there should be
+  // based on how many digits in x width.
+  // This should also work for xlo and xhi < 1.
+  // return:  array of values for the tics
+  //-------------------------------------------------------------
+  $.axes.tics = function(xlo, xhi, ndiv) {
+    const w = $.axes.truncate(xhi - xlo, 5);
+    let v = [];
+    for (let x = Math.ceil(xlo / w) * w; x < xhi; x += w) v.push(x);
+    return v;
+  };
+
+  //-------------------------------------------------------------
+  // figure out how many tics there should be,
+  // with logarithmic spacing.
+  // return:  array of values for the tics.
+  //-------------------------------------------------------------
+  $.axes.logtics = function(xlo, xhi) {
+    // find largest power of 10 < xlo
+    let x = xlo;
+    let tens = 1;
+    while (x < 0.99) {
+      x *= 10;
+      tens /= 10;
+    }
+    while (x > 10) {
+      x /= 10;
+      tens *= 10;
+    }
+    let v = [];
+    for (let y = tens; y < xhi; y *= 10) v.push(y);
+    return v;
   };
 
   //===============================================================
@@ -110,6 +213,9 @@ var ColorStretch = {};
   //
   // The horizontal axis of the histogram is the pixel value,
   // and the vertical axis the number of pixels with that value.
+  //
+  // Note some limitations:  we assume x >= 0 (no negative pixels
+  // values), and that bin contents are also non-negative.
   //===============================================================
 
   //---------------------------------------------------------------
@@ -122,8 +228,11 @@ var ColorStretch = {};
     this.data = bins;
     this.xlo = xlo;
     this.xhi = xhi;
-    //console.log('new Histogram: xlo=' + xlo + ' xhi=' + xhi +
-    //            ' nbins=' + bins.length);
+
+    // counters for associated stretcher function application
+    this.underflows = 0;
+    this.overflows = 0;
+    this.valids = 0;
   }
 
   $.Histogram.prototype = {
@@ -148,22 +257,39 @@ var ColorStretch = {};
     // bin width
     dx: function() { return (this.xhi - this.xlo) / this.data.length; },
 
+    // number of entries
+    sum: function() {
+      let s = 0;
+      for (let i = 0; i < this.data.length; i++) s += this.data[i];
+      return s;
+    },
+
+    // low edge of x bin, given index
+    xLowEdge: function(index) { return this.xlo + index * this.dx(); },
+
+    // bin index to x conversion (same as xLowEdge)
+    bin2x: function(index) { return this.xLowEdge(index); },
+
+    // x to bin index conversion
+    x2bin: function(x) { return ((x - this.xlo) / this.dx()) | 0; },
+
     //-------------------------------------------------------------
     // fill histogram
     //   x = (number or array of numbers) values to fill
     // return value:  the histogram object
     //-------------------------------------------------------------
     fill: function(x) {
-      if (x.isArray()) {
+      const rd = this.data.length / (this.xhi - this.xlo);
+      if (x instanceof Array) {
         for (let j = 0; j < x.length; j++) {
           if (x[j] >= this.xlo && x[j] < this.xhi) {
-            const i = ((x[j]-this.xlo)*this.data.length/(this.xhi-this.xlo))|0;
+            const i = ((x[j]-this.xlo) * rd) | 0;
             this.data[i] += 1;
           }
         }
       } else {
         if (x >= this.xlo && x < this.xhi) {
-          const i = ((x-this.xlo)*this.data.length / (this.xhi-this.xlo))|0;
+          const i = ((x-this.xlo) * rd)|0;
           this.data[i] += 1;
         }
       }
@@ -171,22 +297,32 @@ var ColorStretch = {};
     },
 
     //-------------------------------------------------------------
-    // truncate a value to a specified granularity
-    //   w = value to truncate
-    //   ndiv = target number of divisions
-    // return value:  the truncated value
+    // add another histogram to this one
     //-------------------------------------------------------------
-    truncate: function(w, ndiv) {
-      let n = w / ndiv; // initial bin width
-      let tens = 1;
-      while (n > 10) {
-        n /= 10;
-        tens *= 10;
-      }
-      n = (n | 0);
-      if (n > 5) n = 5;
-      else if (n > 2) n = 2;
-      return n*tens;
+    add: function(hist) {
+      if (this.data.length != hist.data.length ||
+          this.xlo != hist.xlo ||
+          this.xhi != hist.xhi) return null; // histograms don't match
+      for (let i = 0; i < this.data.length; i++) this.data[i] += hist.data[i];
+      return this;
+    },
+
+    //-------------------------------------------------------------
+    // reset the histogram to zero
+    //-------------------------------------------------------------
+    reset: function() {
+      for (let i = 0; i < this.data.length; i++) this.data[i] = 0;
+      return this;
+    },
+
+    //-------------------------------------------------------------
+    // clear counters
+    //-------------------------------------------------------------
+    clearCounters: function() {
+      this.underflows = 0;
+      this.overflows = 0;
+      this.valids = 0;
+      return this;
     },
 
     //-------------------------------------------------------------
@@ -194,28 +330,14 @@ var ColorStretch = {};
     // based on how many digits in x width.
     // return:  array of x values for the tics
     //-------------------------------------------------------------
-    getXTics: function() {
-      const binwidth = this.truncate(this.xhi - this.xlo, 5);
-      let v = [];
-      for (let x = Math.ceil(this.xlo / binwidth) * binwidth;
-           x < this.xhi; x += binwidth) {
-        v.push(x);
-      }
-      return v;
-    },
+    getXTics: function() { return $.axes.tics(this.xlo, this.xhi, 5); },
 
     //-------------------------------------------------------------
     // figure out how many tics there should be in y.
     // assume the bottom of the histogram is 0.
     // return:  array of y values for the tics
     //-------------------------------------------------------------
-    getYTics: function() {
-      const binwidth = this.truncate(this.yhi(), 5);
-      let v = [];
-      let yh = this.yhi();
-      for (let y = 0; y < yh; y += binwidth) v.push(y);
-      return v;
-    },
+    getYTics: function() { return $.axes.tics(0, this.yhi(), 5); },
 
     //-------------------------------------------------------------
     // figure out how many tics there should be in y,
@@ -223,12 +345,7 @@ var ColorStretch = {};
     // assume the bottom corresponds to y=1.
     // return:  array of y values for the tics.
     //-------------------------------------------------------------
-    getLogYTics: function() {
-      let v = [];
-      let yh = this.yhi();
-      for (let y = 1; y < yh; y *= 10) v.push(y);
-      return v;
-    },
+    getLogYTics: function() { return $.axes.logtics(1, this.yhi()); },
 
     //-------------------------------------------------------------
     // rebin so that the new histogram has the maximum bins specified.
@@ -256,15 +373,49 @@ var ColorStretch = {};
             ndata[j] = 0;
           }
         }
-        //console.log('rebin: old xlo=' + this.xlo + ' xhi=' + this.xhi +
-        //            ' nb=' + this.nbins());
-        //console.log('rebin: factor=' + factor + ' nb=' + nb +
-        //            ' olddx=' + olddx);
-        //console.log('rebin: xlo=' + this.xlo + ' xwidth=' + xwidth +
-        //            ' new nbins=' + ndata.length);
         nh = new $.Histogram(ndata, this.xlo, this.xlo + xwidth)
         return nh;
       }
+    },
+
+    //-------------------------------------------------------------
+    // return low edge of first bin with contents
+    //   xstart = starting pixel value
+    //-------------------------------------------------------------
+    getXMinFilled: function(xstart=0) {
+      let i = this.x2bin(xstart);
+      if (i < 0) i = 0;
+      while (i < this.data.length && this.data[i] == 0) i += 1;
+      return this.bin2x(i);
+    },
+
+    //-------------------------------------------------------------
+    // return low edge of last bin with zero contents
+    //-------------------------------------------------------------
+    getXMaxFilled: function() {
+      let i = this.data.length - 1;
+      while (i >= 0 && this.data[i] == 0) i -= 1;
+      return this.bin2x(i + 1);
+    },
+
+    //-------------------------------------------------------------
+    // return [low,high] indices of non-zero contents.
+    // this.data[low] and this.data[high] will both be non-zero.
+    //   xstart = starting x value
+    //   xstop = stopping x value, exclusive (upper edge of bin)
+    //-------------------------------------------------------------
+    getRange: function(xstart=0, xstop=-1) {
+      let ilo = this.x2bin(xstart);
+      if (ilo < 0) ilo = 0;
+      let ihi = (xstop < 0) ? this.x2bin(this.xhi + xstop) : this.x2bin(xstop);
+      if (ihi > this.data.length) ihi = this.data.length;
+      if (ihi <= ilo) return null;
+
+      while (this.data[ilo] == 0 && ilo < this.data.length) ilo += 1;
+      if (ilo == this.data.length || ihi < ilo) return null;
+      while (this.data[ihi] == 0) ihi -= 1; // don't need bound check
+      ihi += 1; // exclusive upper end
+      return [ this.bin2x(ilo), this.bin2x(ihi) ];
     },
 
     //-------------------------------------------------------------
@@ -281,9 +432,6 @@ var ColorStretch = {};
       if (ilo < 0) ilo = 0;
       let ihi = ((xstop - this.xlo) / d) | 0;
       if (xstop < 0) ihi = ((this.xhi + xstop - this.xlo) / d) | 0;
-      //console.log('trim: old xlo=' + this.xlo + ' xhi=' + this.xhi +
-      //            ' nb=' + this.data.length);
-      //console.log('trim: old ilo=' + ilo + ' ihi=' + ihi);
       while (this.data[ilo] == 0 && ilo < this.data.length) ilo += 1;
       if (ilo == this.data.length || ihi < ilo) {
         // empty histogram
@@ -291,12 +439,9 @@ var ColorStretch = {};
       }
       while (this.data[ihi] == 0) ihi -= 1; // don't need bound check here
       ihi += 1; // exclusive upper end
-      //console.log('trim: ilo=' + ilo + ' ihi=' + ihi);
-      //console.log('trim: dx=' + d +
-      //            ' new xlo=' + (this.xlo+ilo*d) +
-      //            ' xhi=' + (this.xlo+ihi*d));
-      return new $.Histogram(this.data.slice(ilo, ihi),
-                             this.xlo + ilo*d, this.xlo + ihi*d);
+      const ndata = new Array(ihi - ilo);
+      for (let i = ilo; i < ihi; i++) ndata[i-ilo] = this.data[i];
+      return new $.Histogram(ndata, this.xlo + ilo*d, this.xlo + ihi*d);
     },
 
     //-------------------------------------------------------------
@@ -307,8 +452,6 @@ var ColorStretch = {};
     // usually for display purposes, not for actual color-mapping.
     //-------------------------------------------------------------
     makeStretcher: function(colormap) {
-      console.log("makeStretcher: xlo=" + this.xlo + " xhi=" + this.xhi +
-                  " nbins=" + this.nbins());
       const sh = this.trim(); // trim zero bins off sides
       let sum = 0;
       let a = new Array(sh.nbins());
@@ -326,16 +469,28 @@ var ColorStretch = {};
         this.gm[i] = v[1];
         this.bm[i] = v[2];
       }
-      return (function(cs) {
+      return (function(cs, hist) {
         return function(v) {
-          if (v < cs.xlo) return $.colormaps.underflow;
-          if (v >= cs.xhi) return $.colormaps.overflow;
-          const i = ((v - cs.xlo) / cs.dx()) | 0;
+          if (v < hist.xlo) {
+            cs.underflows += 1;
+            return $.colormaps.underflow;
+          }
+          if (v >= hist.xhi) {
+            cs.overflows += 1;
+            return $.colormaps.overflow;
+          }
+          cs.valids += 1;
+          const i = ((v - hist.xlo) / hist.dx()) | 0;
           return [ cs.rm[i], cs.gm[i], cs.bm[i], 255 ];
         }
-      })(this);
-    }
+      })(this, sh);
+    },
 
+    resetStretcher: function() {
+      this.underflows = 0;
+      this.overflows = 0;
+      this.valids = 0;
+    }
   };
 
   //===============================================================
@@ -375,11 +530,11 @@ var ColorStretch = {};
 
     // dimensions of parts
     this.histw = (1.0 - margin) * width | 0;
-    this.histh = (1.0 - margin) * height | 0;
+    this.histh = (((1.0 - margin - barHeight) * height) | 0) - this.barSpacer;
     this.xbase = width - this.histw;
 
     this.hist = hist.trim().rebin(this.histw); // trim and rebin for rendering
- }
+  }
 
   $.Renderer.prototype = {
 
@@ -394,19 +549,43 @@ var ColorStretch = {};
       const n = Math.min(width, this.hist.nbins());
       const d = this.hist.dx();
       for (let i = 0; i < n; i++) {
-        let v = i * d + this.hist.xlo;
-        let c = stretcher(v);
-        //console.log('horizontalBar: i=' + i + ' v=' + v +
-        //            ' r=' + c[0] + ' g=' + c[1] + ' b=' + c[2] + ' a=' + c[3]);
-        let p = i * 4;
+        const v = i * d + this.hist.xlo;
+        const c = stretcher(v);
+        const p = i * 4;
         pxl[p] = c[0];
         pxl[p+1] = c[1];
         pxl[p+2] = c[2];
         pxl[p+3] = c[3];
       }
       for (let j = 1; j < height; j++) {
-        let p = j * width * 4;
+        const p = j * width * 4;
         for (let i = 0; i < 4*n; i++) pxl[p+i] = pxl[i];
+      }
+      // draw color traces in order or r, g, and b
+      // (stretching seems to make this less useful)
+      for (let i = 0; i < n; i++) {
+        const p = i * 4;
+        const r = pxl[p];
+        const g = pxl[p+1];
+        const b = pxl[p+2];
+        let y = height - (r * height / 256) | 0;
+        let base = 4 * width * y;
+        pxl[base+p] = 255;
+        pxl[base+p+1] = 0;
+        pxl[base+p+2] = 0;
+        pxl[base+p+3] = 255;
+        y = height - (g * height / 256) | 0;
+        base = 4 * width * y;
+        pxl[base+p] = 0;
+        pxl[base+p+1] = 255;
+        pxl[base+p+2] = 0;
+        pxl[base+p+3] = 255;
+        y = height - (b * height / 256) | 0;
+        base = 4 * width * y;
+        pxl[base+p] = 0;
+        pxl[base+p+1] = 0;
+        pxl[base+p+2] = 255;
+        pxl[base+p+3] = 255;
       }
     },
 
@@ -498,7 +677,6 @@ var ColorStretch = {};
       for (let i = 0; i < xtics.length; i++) {
         const v = xtics[i]; // pixel value (x axis)
         const x = this.getXCoordinate(v); // location on canvas
-        //console.log('horizontalAxis: x=' + v + ' xc=' + x);
         context.beginPath();
         context.moveTo(x, ytop);
         context.lineTo(x, ybottom);
@@ -545,11 +723,11 @@ var ColorStretch = {};
       }
 
       // horizontal axis (assume colorbar serves as line)
-      //console.log("horizontal axis dx=" + this.hist.dx());
       const xtics = this.hist.getXTics();
+      const xtl = ((this.height - this.histh - barh - this.barSpacer) / 3) | 0;
       this.horizontalAxis(context, xtics,
                           this.histh + barh + this.barSpacer,
-                          this.histh + barh + this.barSpacer + ((barh/2)|0));
+                          this.histh + barh + this.barSpacer + xtl);
 
       // vertical axis:  linear or log
       let ytics = null;
@@ -638,6 +816,20 @@ var ColorStretch = {};
   };
 
   //---------------------------------------------------------------
+  // fill a histogram based on given pixels
+  //   hist = existing Histogram
+  //   pxl = pixel array, as from context.getImageData(...).data
+  //   decoder = function rgba -> scalar pixel value
+  //---------------------------------------------------------------
+  $.filter.fill = function(hist, pxl, decoder) {
+    for (let i = 0; i < pxl.length; i += 4) {
+      let v = decoder(pxl[i], pxl[i+1], pxl[i+2], pxl[i+3]);
+      hist.fill(v);
+    }
+    return hist;
+  };
+
+  //---------------------------------------------------------------
   // make a histogram based on given pixels
   //   pxl = pixel array, as from context.getImageData(...).data
   //   decoder = function rgba -> scalar pixel value
@@ -660,6 +852,94 @@ var ColorStretch = {};
     return hist;
   };
 
+  //---------------------------------------------------------------
+  // make a histogram based on given pixels, range [xlo,xhi)
+  //---------------------------------------------------------------
+  $.filter.accumulateWithRange = function(pxl, decoder, xlo, xhi) {
+    let xmin = 1 << 18;
+    let xmax = 0;
+    let counts = new Array(xhi);
+    for (let i = 0; i < counts.length; i++) counts[i] = 0;
+    for (let i = 0; i < pxl.length; i += 4) {
+      const v = decoder(pxl[i], pxl[i+1], pxl[i+2], pxl[i+3]);
+      if (v < xlo || v >= xhi) continue;
+      counts[v] += 1;
+      if (v > xmax) xmax = v;
+      if (v < xmin) xmin = v;
+    }
+    let bins = new Array(xmax - xmin + 1);
+    let j = 0;
+    for (let i = xmin; i <= xmax; i++) bins[j++] = counts[i];
+    let hist = new ColorStretch.Histogram(bins, xmin, xmax+1);
+    return hist;
+  };
+
+  //---------------------------------------------------------------
+  // make a histogram based on pixels
+  //     which are above threshold,
+  //     and are not adjacent to below-threshold pixels
+  //   pxl = pixel array, as from context.getImageData(...).data
+  //   decoder = function rgba -> scalar pixel value
+  //   pwidth = width in pixels of pxl array
+  //   threshold = minimum pixel value to accept
+  //---------------------------------------------------------------
+  $.filter.accumulateWithThreshold = function(pxl, decoder, pwidth, threshold) {
+    let xmin = 1 << 18;
+    let xmax = 0;
+    let counts = new Array(1 << 18);
+    for (let i = 0; i < counts.length; i++) counts[i] = 0;
+
+    // buffer three rows
+    let v = [ new Array(pwidth), new Array(pwidth), new Array(pwidth) ];
+    for (let i = 0; i < pwidth; i++) v[0][i] = 1 << 18; // out of bounds
+    const decodeRow = function(vs, ps, base, w) {
+      let j = 0;
+      for (let i = base; i < base + 4*w; i += 4) {
+        vs[j++] = decoder(ps[i], ps[i+1], ps[i+2], ps[i+3]);
+      }
+      return v;
+    }
+    decodeRow(v[1], pxl, 0, pwidth);
+    decodeRow(v[2], pxl, 4*pwidth, pwidth);
+    v0 = v[0]; // moving row references
+    v1 = v[1];
+    v2 = v[2];
+
+    const pheight = pxl.length / pwidth;
+    for (let irow = 0; irow < pheight; irow++) {
+      for (let i = 0; i < pwidth; i++) {
+        if (v1[i] < threshold) continue;
+        if (v0[i] < threshold || v2[i] < threshold) continue;
+        if (i > 0) {
+          if (v0[i-1] < threshold || v1[i-1] < threshold || v2[i-1] < threshold)
+            continue;
+        } else if (i < pwidth - 1) {
+          if (v0[i+1] < threshold || v1[i+1] < threshold || v2[i+1] < threshold)
+            continue;
+        }
+        // pixel passes all thresholds
+        const vi = v1[i];
+        counts[vi] += 1;
+        if (vi > xmax) xmax = vi;
+        if (vi < xmin) xmin = vi;
+      }
+      // update rows
+      let va = v0; // will overwrite this row
+      v0 = v1;
+      v1 = v2;
+      if (irow == pheight - 1) { // last row - fill next row with 1<<18
+        for (let i = 0; i < pwidth; i++) va[i] = 1 << 18;
+      } else {
+        decodeRow(va, pxl, 4*pwidth*(irow+1), pwidth);
+      }
+      v2 = va;
+    }
+    let bins = new Array(xmax - xmin + 1);
+    let j = 0;
+    for (let i = xmin; i <= xmax; i++) bins[j++] = counts[i];
+    let hist = new ColorStretch.Histogram(bins, xmin, xmax+1);
+    return hist;
+  };
 
 })(ColorStretch);
 
