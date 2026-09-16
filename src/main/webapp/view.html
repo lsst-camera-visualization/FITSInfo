@@ -98,8 +98,13 @@
                 position: fixed;
                 right: 0;
                 bottom:0;
-                background: #ccd;
+                /* Semi-opaque so the readout stays legible over image pixels (in
+                   full-page mode it sits directly on the image). */
+                background: rgba(204, 204, 221, 0.85);
                 color: #334;
+                padding: 2px 6px;
+                /* Above OSD's full-page overlay / canvas so it is never painted over. */
+                z-index: 1000000;
             }
             #datastrip > * {
                 display: inline-block;
@@ -723,6 +728,22 @@
                         $('#toolbarDiv').children().last().remove();
                         
                         osd.addHandler('open', openHandler);
+
+                        // In full-page mode OSD promotes its viewer element (#osd-view) to a
+                        // high z-index fixed overlay covering the whole viewport, which paints
+                        // over #datastrip and hides the position/pixel readout. Move the
+                        // readout into the full-page element while active (so it rides the same
+                        // overlay, like the toolbar does) and restore it to its normal place on
+                        // exit. `#datastrip` is fixed bottom-right, so it lands in the corner
+                        // either way.
+                        osd.addHandler('full-page', function (event) {
+                            const datastrip = document.getElementById('datastrip');
+                            if (event.fullPage) {
+                                osd.element.appendChild(datastrip);
+                            } else {
+                                document.querySelector('.box').appendChild(datastrip);
+                            }
+                        });
 
                         class AffineTransform {
                             constructor(flatmatrix) {
