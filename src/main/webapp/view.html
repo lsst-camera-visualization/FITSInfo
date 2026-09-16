@@ -220,6 +220,11 @@
                         let imageInfo = null;
                         let eventSource = null;
 
+                        // The Screenshot plugin looks up this string when it initializes;
+                        // OSD ships no default for it, which otherwise logs an "Untranslated
+                        // source string" warning. Register it so the lookup is clean.
+                        OpenSeadragon.setString('Tooltips.ScreenshotToggle', 'Make Screenshot');
+
                         let homeButton = new OpenSeadragon.Button({
                             srcRest: "openseadragon/images/home_rest.png",
                             srcDown: "openseadragon/images/home_pressed.png",
