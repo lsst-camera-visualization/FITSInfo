@@ -214,10 +214,12 @@
 
  		// Add button
         var prefix = this.prefixUrl || this.viewer.prefixUrl || '';
-        // OSD 3.0.0 renamed Viewer.buttons -> Viewer.buttonGroup; the old name still
-        // works but logs a deprecation warning. Prefer buttonGroup, fall back for
-        // older OSD. (LSST-local patch for the 6.x upgrade.)
-        var buttonGroup = this.viewer.buttonGroup || this.viewer.buttons;
+        // OSD 3.0.0 renamed Viewer.buttons -> Viewer.buttonGroup (a warning-only getter
+        // on 6.x). buttonGroup is null when the app builds its own toolbar, so testing
+        // it with `||` would trip the deprecated getter. Read `buttons` only on OSD too
+        // old to have `buttonGroup` at all. (LSST-local patch for the 6.x upgrade.)
+        var buttonGroup = ('buttonGroup' in this.viewer) ? this.viewer.buttonGroup
+                                                          : this.viewer.buttons;
         var useGroup = buttonGroup && buttonGroup.buttons;
         var anyButton = useGroup ? buttonGroup.buttons[0] : null;
         var onFocusHandler = anyButton ? anyButton.onFocus : null;
