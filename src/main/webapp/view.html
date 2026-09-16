@@ -220,6 +220,11 @@
                         let imageInfo = null;
                         let eventSource = null;
 
+                        // The Screenshot plugin looks up this string when it initializes;
+                        // OSD ships no default for it, which otherwise logs an "Untranslated
+                        // source string" warning. Register it so the lookup is clean.
+                        OpenSeadragon.setString('Tooltips.ScreenshotToggle', 'Make Screenshot');
+
                         let homeButton = new OpenSeadragon.Button({
                             srcRest: "openseadragon/images/home_rest.png",
                             srcDown: "openseadragon/images/home_pressed.png",
@@ -434,7 +439,13 @@
                                     preserveOverlays: true,
                                     preserveViewport: true,
                                     maxZoomPixelRatio: 2,
-                                    crossOriginPolicy: true
+                                    // OpenSeadragon 6.x: "auto" uses the WebGL drawer where
+                                    // available and falls back to canvas per device capability.
+                                    drawerType: "auto",
+                                    // Tiles come cross-origin from the Cantaloupe IIIF servers;
+                                    // the WebGL drawer needs a real CORS mode ("Anonymous"), not
+                                    // the legacy boolean `true` accepted by OSD 3.x.
+                                    crossOriginPolicy: "Anonymous"
                                 });
                                 this.multi = false;
                                 this.geominfo = {};
