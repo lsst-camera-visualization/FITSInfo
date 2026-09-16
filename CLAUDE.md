@@ -54,3 +54,4 @@ The frontend uses the DevExtreme DataGrid, which sends `filter`/`sort`/`group` a
 - `javax.*` (Java EE 8 / Jakarta pre-namespace-change), not `jakarta.*` — Jersey 2.31.
 - Hibernate queries are built with the JPA Criteria API throughout `ImageDAO`, never HQL/SQL strings.
 - `Main` in `org.lsst.fits.dao` is a scratch/manual DB-connectivity check (`main` method), not part of the deployed app.
+- Planning/design docs go under `src/site/markdown/` (Maven's site location), **not** a root-level `docs/` folder. The author uses NetBeans, whose Maven Projects view only shows files under `src/`; root-level folders like `docs/` are hidden there. Keep `CLAUDE.md` itself at the repo root (it must be there to be auto-loaded).

@@ -20,5 +20,6 @@ public final class MyConfiguration extends ResourceConfig {
         register(WebHook.class);
         register(EventSender.class);
         register(FitsHeaderDataSource.class);
+        register(SiteConfigDataSource.class);
     }
 }

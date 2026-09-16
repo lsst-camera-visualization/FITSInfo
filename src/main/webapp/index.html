@@ -16,24 +16,32 @@
         <script>
             $(function () {
                 let urlParams = new URLSearchParams(window.location.search);
-                let serverName = window.location.hostname;
-                console.log(serverName);
-                let host = serverName.indexOf("cp.lsst.org")>=0 ? "chile" : serverName.indexOf("ls.lsst.org")>=0 ? "BTS" : serverName.indexOf("slac.stanford.edu")>=0 ? "slac" : "other";
-                let dataSources = ["Main Camera", "ComCam", "AuxTel", "TS8", "ComCam Tucson", "LSSTCam BTS"];
-                if (host === 'slac') {
-                    dataSources = ["TS8"];
-                } else if (host === 'chile') {
-                    dataSources = ["Main Camera", "ComCam", "AuxTel"];
-                } else if (host === "BTS") {
-                    dataSources = ["LSSTCam BTS"];
-                }
-                console.log(dataSources);
                 let view = urlParams.get('view');
-                if (isNotEmpty(view)) {
-                    let site = view.toLowerCase();
-                } else {
-                    view = dataSources[0];
-                }
+                let dataSources = [];
+                let site;
+                let dataGrid;
+                // Per-site config (telCode + grid column layout), keyed by label. Populated
+                // from the backend up front so setView() can stay synchronous.
+                let siteConfigByLabel = {};
+                // The data-source catalog (labels + order) now comes from the backend,
+                // resolved per host, replacing the previous hard-wired host detection.
+                let host = window.location.hostname;
+                $.getJSON(`rest/config?host=${encodeURIComponent(host)}`, function (config) {
+                    dataSources = config.sites.map(s => s.label);
+                    console.log(dataSources);
+                    if (!isNotEmpty(view)) {
+                        view = dataSources[0];
+                    }
+                    // Fetch every visible site's config, then build the grid once they are
+                    // all cached so the initial setView() and dropdown switches are instant.
+                    let fetches = config.sites.map(s =>
+                        $.getJSON(`rest/${s.key}/config?host=${encodeURIComponent(host)}`, function (cfg) {
+                            cfg.key = s.key;
+                            siteConfigByLabel[s.label] = cfg;
+                        })
+                    );
+                    $.when.apply($, fetches).then(buildGrid);
+                });
                 let gridDataSource = new DevExpress.data.DataSource({
                     key: "obsId",
                     load: function (loadOptions) {
@@ -69,66 +77,30 @@
                 }
                 
                 function setView(view) {
-                    if (view === "ComCam") {
-                        dataGrid.filter(["telCode", "=", "CC"]);
-                        dataGrid.columnOption("dayobs", "visible", true);
-                        dataGrid.columnOption("dayobs", "groupIndex", 0);
-                        dataGrid.columnOption("run", "groupIndex", undefined);
-                        dataGrid.columnOption("runMode", "groupIndex", undefined);
-                        dataGrid.columnOption("run", "visible", false);
-                        dataGrid.columnOption("runMode", "visible", false);
-                        site = "comcam";
-                    } else if (view === "AuxTel") {
-                        dataGrid.filter(["telCode", "=", "AT"]);
-                        dataGrid.columnOption("dayobs", "visible", true);
-                        dataGrid.columnOption("dayobs", "groupIndex", 0);
-                        dataGrid.columnOption("run", "groupIndex", undefined);
-                        dataGrid.columnOption("runMode", "groupIndex", undefined);
-                        dataGrid.columnOption("run", "visible", false);
-                        dataGrid.columnOption("runMode", "visible", false);
-                        site = "auxtel";
-                    } else if (view === "Main Camera") { // Main camera
-                        dataGrid.filter(["telCode", "=", "MC"]);
-                        dataGrid.columnOption("dayobs", "visible", true);
-                        dataGrid.columnOption("dayobs", "groupIndex", 0);
-                        dataGrid.columnOption("imgType", "visible", true);
-                        dataGrid.columnOption("imgType", "groupIndex", 1);
-                        dataGrid.columnOption("run", "groupIndex", undefined);
-                        dataGrid.columnOption("runMode", "groupIndex", undefined);
-                        dataGrid.columnOption("run", "visible", false);
-                        dataGrid.columnOption("runMode", "visible", false);
-                        site = "lsstcam";
-                    } else if (view === "LSSTCam BTS") { // Main camera (BTS)
-                        dataGrid.filter(["telCode", "=", "MC"]);
-                        dataGrid.columnOption("dayobs", "visible", false);
-                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
-                        dataGrid.columnOption("run", "groupIndex", 1);
-                        dataGrid.columnOption("runMode", "groupIndex", 0);
-                        dataGrid.columnOption("run", "visible", true);
-                        dataGrid.columnOption("runMode", "visible", true);
-                        site = "lsstcam-bts";
-                    } else if (view === "TS8") { // TS8
-                        dataGrid.filter(["telCode", "=", "TS"]);
-                        dataGrid.columnOption("dayobs", "visible", false);
-                        dataGrid.columnOption("dayobs", "groupIndex", undefined);
-                        dataGrid.columnOption("run", "groupIndex", 1);
-                        dataGrid.columnOption("runMode", "groupIndex", 0);
-                        dataGrid.columnOption("run", "visible", true);
-                        dataGrid.columnOption("runMode", "visible", true);
-                        site = "maincamera";
-                    } else { // ComCam Tucson
-                        dataGrid.filter(["telCode", "=", "CC"]);
-                        dataGrid.columnOption("dayobs", "visible", true);
-                        dataGrid.columnOption("dayobs", "groupIndex", 0);
-                        dataGrid.columnOption("run", "groupIndex", undefined);
-                        dataGrid.columnOption("runMode", "groupIndex", undefined);
-                        dataGrid.columnOption("run", "visible", false);
-                        dataGrid.columnOption("runMode", "visible", false);
-                        site = "tucson";
+                    // Column layout and telCode filter for each view are now driven by the
+                    // backend site config (sites.json), replacing the former per-view branches.
+                    let cfg = siteConfigByLabel[view];
+                    if (!cfg) {
+                        // Fall back to the first (default) catalog entry, matching the old
+                        // else-branch behavior of an unrecognized view.
+                        cfg = siteConfigByLabel[dataSources[0]];
                     }
+                    site = cfg.key;
+                    dataGrid.filter(["telCode", "=", cfg.telCode]);
+                    cfg.grid.columns.forEach(function (c) {
+                        if ("visible" in c) {
+                            dataGrid.columnOption(c.name, "visible", c.visible);
+                        }
+                        if ("groupIndex" in c) {
+                            // JSON null means "ungroup" -> DevExtreme wants undefined.
+                            dataGrid.columnOption(c.name, "groupIndex",
+                                    c.groupIndex === null ? undefined : c.groupIndex);
+                        }
+                    });
                 }
 
-                let dataGrid = $("#gridContainer").dxDataGrid({
+                function buildGrid() {
+                dataGrid = $("#gridContainer").dxDataGrid({
                     dataSource: gridDataSource,
                     showBorders: true,
                     rowAlternationEnabled: true,
@@ -267,6 +239,7 @@
                     }
                 }).dxDataGrid("instance");
                 setView(view);
+                }
             });
         </script>
     </body>

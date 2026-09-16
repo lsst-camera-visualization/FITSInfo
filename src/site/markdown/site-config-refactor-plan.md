@@ -18,18 +18,26 @@ pages consume as data. Behavior-preserving refactor.
 - The two `multiGeom` raft-mosaic tables → the existing `nodeMap` endpoint.
 - The transient `dc02dc10swap` date hack (stays inline in `view.html`).
 
-## Open questions to resolve before/during implementation
+## Resolved decisions (from author, 2026-09-10)
 
-These come from ambiguities in the current code. Confirm with the author; do not
-silently guess when extracting literals:
+The original open questions have been answered:
 
-1. **`MC_` image with no `view` param.** Current code picks `lsstcam` vs `lsstcam-bts`
-   purely by host. Environment `sites` ordering in `sites.json` must preserve this.
-2. **`TS8` label → `maincamera` site.** `index.html` maps dropdown entry `"TS8"` to
-   `site="maincamera"`. Kept faithfully; confirm it is not stale.
-3. **`sources` lists per site.** Extracted from current `view.html` branches
-   (auxtel=`["raw","RubinTV"]`, comcam=`["raw","postISR","calexp"]`,
-   lsstcam=`["raw","postISR"]`, default=`["raw","RubinTV"]`). Verify each.
+1. **Site resolution is `telCode`-driven, not environment-driven.** The image-name
+   prefix determines the site: `TS_` → `maincamera` (TS8), `AT_` → `auxtel`,
+   `CC_` → `comcam`/`tucson`, `MC_` → `lsstcam`/`lsstcam-bts`. The `view` query param
+   overrides. The environment supplies only (a) the host `suffix` and (b) which site
+   keys populate the dropdown catalog. **Add an explicit `TS_` branch** — the current
+   `view.html` has none (TS8 works only by falling through to the `site="maincamera"`
+   default at line 155); make it intentional.
+2. **`maincamera` (TS8) is currently inactive.** Its images are only accessible via S3,
+   and that path is **not yet configured or supported** — planned future work. Keep
+   `maincamera` in `sites.json` as a faithful entry (`label: "TS8"`, `telCode: "TS"`),
+   but mark it `active: false` and do **not** invent a working IIIF URL for it. The
+   `slac` environment must NOT list it as a live default. `MC_` on any non-BTS host
+   resolves to `lsstcam` (preserving current behavior); TS8 is reached only via `TS_`.
+3. **`sources` lists confirmed.** auxtel/tucson/`lsstcam-bts` inherit the default
+   `["raw","RubinTV"]` (BTS confirmed as `["raw","RubinTV"]`, not the earlier draft
+   guess of `["raw"]`); comcam=`["raw","postISR","calexp"]`; lsstcam=`["raw","postISR"]`.
 
 ## Guiding principle
 
@@ -54,6 +62,10 @@ the open questions above.
       "sites": ["maincamera"] },
     { "match": "",                  "name": "other", "suffix": ".cp.lsst.org",
       "sites": ["lsstcam", "comcam", "auxtel", "maincamera", "tucson", "lsstcam-bts"] }
+    // NOTE: the slac environment lists `maincamera` only so the TS8 dropdown entry
+    // still appears there (matching current index.html host==='slac' → ["TS8"]).
+    // maincamera is `active: false` (S3-only, unsupported) so the viewer will not
+    // route a working image to it yet. Per-image MC_ still resolves to lsstcam.
   ],
   "sites": {
     "lsstcam":     { "label": "Main Camera",   "telCode": "MC",
@@ -74,12 +86,16 @@ the open questions above.
                      "fields": { "run": false, "source": false } },
     "lsstcam-bts": { "label": "LSSTCam BTS",   "telCode": "MC",
                      "iiif": "http://lsstcam-vs01{suffix}:8182/iiif/2/",
-                     "defaultRaft": "all", "sources": ["raw"],
+                     "defaultRaft": "all", "sources": ["raw", "RubinTV"],
                      "fields": { "run": false, "source": false } },
-    "maincamera":  { "label": "TS8",           "telCode": "TS",
-                     "iiif": "http://lsstcam-vs01{suffix}:8182/iiif/2/",
+    "maincamera":  { "label": "TS8",           "telCode": "TS", "active": false,
+                     "iiif": null,
                      "defaultRaft": "R22", "sources": ["raw", "RubinTV"],
                      "fields": { "run": true, "source": false } }
+    // maincamera/TS8: images are S3-only; that access path is not yet configured or
+    // supported. `active: false` + `iiif: null` until the S3 path is added (future
+    // work). Keep the entry so the TS8 dropdown label survives; a TS_ image routing
+    // here should surface a clear "not yet supported" state rather than a broken URL.
   }
 }
 ```
@@ -134,12 +150,20 @@ Replace the `iif2`/`site`/`sources`/field-visibility block (currently ~lines 146
    (current line ~161) and resolves the "can't test on a laptop" FIXME (line ~159):
    an unknown laptop host falls through to the default environment.
 2. Resolve the site key in this order: `view` query param → `telCode` derived from the
-   image-name prefix (`AT_`/`CC_`/`MC_`/`TS_`) → environment default (first in `sites`).
+   image-name prefix → environment default (first in `sites`). `telCode` mapping:
+   `TS_`→`maincamera`, `AT_`→`auxtel`, `CC_`→`comcam` (or `tucson` when `view==="Tucson"`),
+   `MC_`→`lsstcam-bts` if the resolved environment is BTS else `lsstcam`. Add the `TS_`
+   branch explicitly (current code lacks it and relies on the default fall-through).
 3. Fetch `/rest/{site}/config`. Set:
    - `iif2` = site `iiif` (server already substituted `{suffix}`).
    - `raftName ||= defaultRaft`.
    - populate `#source` dropdown from `sources`.
    - toggle `#runField` / `#sourceField` visibility from `fields`.
+   - **If the resolved site has `active: false` (e.g. `maincamera`/TS8, S3-only):** do
+     not attempt to build an IIIF URL from `iiif: null`. Surface a clear "TS8 images are
+     not yet supported (S3 access pending)" message in the viewer instead of a broken
+     request. This is the one intentional behavior change vs. current code, which would
+     silently produce a non-working `lsstcam-vs01` URL for a `TS_` image.
 4. Leave everything downstream unchanged: `restURL`, `EventSource("rest/"+site+"/notify")`,
    `openIdentifier(...)`, colorMaps/biases/scales lists, and the `multiGeom` mosaic
    (deferred) all keep working off the derived `site` string.
@@ -173,11 +197,14 @@ override so it is testable from a laptop, confirm against pre-change behavior:
 - `view.html`: resolved `site`, `iif2` URL (including `{suffix}` substitution),
   default raft, `#source` dropdown contents, and `#runField`/`#sourceField` visibility.
 - Live update still connects: `EventSource("rest/{site}/notify")`.
-- Spot-check an `MC_` image with no `view` param resolves to the same site as before in
-  both chile and BTS (open question #1).
+- `MC_` image with no `view` param resolves to `lsstcam` on chile/slac/other and
+  `lsstcam-bts` on BTS (matches current code).
+- `TS_` image resolves to `maincamera` and shows the "not yet supported (S3 pending)"
+  state — no broken IIIF request. (Intentional change; see below.)
 
 Regression bar: any observable difference from current behavior is a bug in the literal
-extraction, not an intended change.
+extraction, **except** the one intentional change — a `TS_`/`maincamera` image now shows
+an explicit unsupported-state message instead of a silently broken `lsstcam-vs01` URL.
 
 ---
 
@@ -191,9 +218,46 @@ extraction, not an intended change.
 | `src/main/webapp/view.html` | replace site-routing block with config fetch |
 | `src/main/webapp/index.html` | replace host detection + `dataSources` with config fetch |
 
-## Notes for the follow-up (not this effort)
+## Follow-up items
 
-- `index.html` `setView()` column/group config → add a `grid` key per site in `sites.json`.
-- Raft mosaic: generalize the existing unused `nodeMap` endpoint in `FitsDataSource.java`
-  to emit the full `x/y/width/xpixel/ypixel/url` the client needs, and replace both
-  25-entry `multiGeom` tables in `view.html`.
+- **DONE** — `index.html` `setView()` column/group config moved into a `grid` key per
+  site in `sites.json`. Each site's `grid.columns` lists `{name, visible, groupIndex}`
+  (JSON `null` groupIndex = ungroup → DevExtreme `undefined`), extracted verbatim from
+  the old per-view branches. `index.html` fetches all visible sites' `/{site}/config`
+  up front, caches them by label, and `setView()` applies `filter(telCode)` + column
+  options generically from the cached config. The six near-identical branches are gone.
+- **DONE — Raft mosaic** (the old "just use the `nodeMap` endpoint" note was too simple —
+  that endpoint hardcoded SLAC URLs and ignored `source`, `suffix`, and the `dc02dc10swap`
+  date hack). Implemented approach: **geometry → config, host logic stays client-side.**
+  The dead `nodeMap` endpoint has since been **removed** from `FitsDataSource.java` (no
+  frontend referenced it, and the client-side config-driven mosaic is now authoritative).
+
+  1. **Geometry** is identical across both former `multiGeom` tables and is a pure function
+     of the raft key: `R{r}{c}` → `x = c*0.2`, `width = 0.2`, `y = (4-r)*0.2`,
+     `xpixel = c*xRaft`, `ypixel = r*yRaft`. `xRaft`/`yRaft` live in a per-site `mosaic`
+     block in `sites.json` (only `lsstcam`/`lsstcam-bts`); the 25 rows are **derived** in
+     `openIdentifier()`, not listed.
+  2. **Per-raft host mapping** stays client-side (runtime-dependent):
+     - `source === "raw"` → per-raft node from `mosaic.raw` (`R00`→`dc10`, etc.).
+     - otherwise (postISR) → uniform `mosaic.default` (`vs01`).
+  3. **Node names stored canonically padded; formatted per environment (fixes a latent
+     bug).** The old code hardcoded `legacy = false`, so BTS was wrongly served *short*
+     names (`dc2`/`vs1`); BTS actually runs *padded* names (`dc02`/`vs01`), the summit uses
+     short. `sites.json` stores node names in padded form; an explicit **`paddedNodeNames`**
+     boolean on each `environments[]` entry (BTS `true`, others `false`) is returned by
+     `rest/config` and read in `resolveSiteConfig()`. When false, the client maps padded →
+     short by stripping the leading zero (`dc02`→`dc2`, `vs01`→`vs1`) **except** the
+     irregular `dc10`→`dc100`. Summit output is byte-identical to before; BTS is corrected.
+  4. **`dc02dc10swap` date hack stays inline** in `openIdentifier()` (raw-only, keyed on the
+     image name/date). Corners (the four rafts whose raw node is `dc10`) swap to
+     `mosaic.swapNode` (`dc02`) for the 2025-05-02..07 MC_ window at the summit. **Decision:**
+     the swap target now follows the same `paddedNodeNames` rule (`dc2` at summit, `dc02` at
+     BTS), removing the old hardcoded-padded exception — changing the summit corner URL for
+     that window (`dc02` → `dc2`), a deliberate correction alongside the BTS naming fix.
+  5. Collapsed the two duplicated 25-row tables (~80 lines) into one derived builder + config.
+
+  **Verification:** a Node harness reconstructed the old table logic and the new builder and
+  diffed all 8 combinations (raw/postISR × padded/short × swap/normal) — every raft matched
+  the bug-fixed expectation (old logic with `legacy = padded`), and summit short-name output
+  reproduced the historic literals exactly. `mvn -o package` clean; `sites.json` valid;
+  `view.html` JS passes `node --check`.

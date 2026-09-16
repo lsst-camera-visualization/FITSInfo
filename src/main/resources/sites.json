@@ -1,0 +1,143 @@
+{
+  "environments": [
+    { "match": "cp.lsst.org",       "name": "chile", "suffix": ".cp.lsst.org",
+      "paddedNodeNames": false,
+      "sites": ["lsstcam", "comcam", "auxtel"] },
+    { "match": "ls.lsst.org",       "name": "BTS",   "suffix": ".ls.lsst.org",
+      "paddedNodeNames": true,
+      "sites": ["lsstcam-bts"] },
+    { "match": "slac.stanford.edu", "name": "slac",  "suffix": ".cp.lsst.org",
+      "paddedNodeNames": false,
+      "sites": ["maincamera"] },
+    { "match": "",                  "name": "other", "suffix": ".cp.lsst.org",
+      "paddedNodeNames": false,
+      "sites": ["lsstcam", "comcam", "auxtel", "maincamera", "tucson", "lsstcam-bts"] }
+  ],
+  "sites": {
+    "lsstcam": {
+      "label": "Main Camera",
+      "telCode": "MC",
+      "active": true,
+      "iiif": "http://lsstcam-vs01{suffix}:8182/iiif/2/",
+      "defaultRaft": "all",
+      "sources": ["raw", "postISR"],
+      "fields": { "run": false, "source": true },
+      "grid": {
+        "columns": [
+          { "name": "dayobs",  "visible": true,  "groupIndex": 0 },
+          { "name": "imgType", "visible": true,  "groupIndex": 1 },
+          { "name": "run",     "visible": false, "groupIndex": null },
+          { "name": "runMode", "visible": false, "groupIndex": null }
+        ]
+      },
+      "mosaic": {
+        "comment": "Node names stored in canonical padded (.ls.lsst.org / BTS) form. The client maps them to short form for environments where paddedNodeNames=false: strip the leading zero (dc02->dc2, vs01->vs1), EXCEPT the irregular dc10->dc100.",
+        "xRaft": 12688,
+        "yRaft": 12686,
+        "raw": {
+          "R00": "dc10", "R01": "dc06", "R02": "dc08", "R03": "dc09", "R04": "dc10",
+          "R10": "dc04", "R11": "dc06", "R12": "dc03", "R13": "dc05", "R14": "dc07",
+          "R20": "dc04", "R21": "dc07", "R22": "dc03", "R23": "dc09", "R24": "dc07",
+          "R30": "dc08", "R31": "dc05", "R32": "dc04", "R33": "dc09", "R34": "dc03",
+          "R40": "dc10", "R41": "dc08", "R42": "dc05", "R43": "dc06", "R44": "dc10"
+        },
+        "swapNode": "dc02",
+        "default": "vs01"
+      }
+    },
+    "comcam": {
+      "label": "ComCam",
+      "telCode": "CC",
+      "active": true,
+      "iiif": "http://comcam-dc01.cp.lsst.org:8182/iiif/2/",
+      "defaultRaft": "R22",
+      "sources": ["raw", "postISR", "calexp"],
+      "fields": { "run": false, "source": true },
+      "grid": {
+        "columns": [
+          { "name": "dayobs",  "visible": true,  "groupIndex": 0 },
+          { "name": "run",     "visible": false, "groupIndex": null },
+          { "name": "runMode", "visible": false, "groupIndex": null }
+        ]
+      }
+    },
+    "auxtel": {
+      "label": "AuxTel",
+      "telCode": "AT",
+      "active": true,
+      "iiif": "http://auxtel-dc01.cp.lsst.org:8182/iiif/2/",
+      "defaultRaft": "R00",
+      "sources": ["raw", "RubinTV"],
+      "fields": { "run": false, "source": true },
+      "grid": {
+        "columns": [
+          { "name": "dayobs",  "visible": true,  "groupIndex": 0 },
+          { "name": "run",     "visible": false, "groupIndex": null },
+          { "name": "runMode", "visible": false, "groupIndex": null }
+        ]
+      }
+    },
+    "tucson": {
+      "label": "ComCam Tucson",
+      "telCode": "CC",
+      "active": true,
+      "iiif": "http://comcam-dc01.tu.lsst.org:8182/iiif/2/",
+      "defaultRaft": "R22",
+      "sources": ["raw", "RubinTV"],
+      "fields": { "run": false, "source": false },
+      "grid": {
+        "columns": [
+          { "name": "dayobs",  "visible": true,  "groupIndex": 0 },
+          { "name": "run",     "visible": false, "groupIndex": null },
+          { "name": "runMode", "visible": false, "groupIndex": null }
+        ]
+      }
+    },
+    "lsstcam-bts": {
+      "label": "LSSTCam BTS",
+      "telCode": "MC",
+      "active": true,
+      "iiif": "http://lsstcam-vs01{suffix}:8182/iiif/2/",
+      "defaultRaft": "all",
+      "sources": ["raw", "RubinTV"],
+      "fields": { "run": false, "source": false },
+      "grid": {
+        "columns": [
+          { "name": "dayobs",  "visible": false, "groupIndex": null },
+          { "name": "run",     "visible": true,  "groupIndex": 1 },
+          { "name": "runMode", "visible": true,  "groupIndex": 0 }
+        ]
+      },
+      "mosaic": {
+        "comment": "Node names stored in canonical padded (.ls.lsst.org / BTS) form. The client maps them to short form for environments where paddedNodeNames=false: strip the leading zero (dc02->dc2, vs01->vs1), EXCEPT the irregular dc10->dc100.",
+        "xRaft": 12688,
+        "yRaft": 12686,
+        "raw": {
+          "R00": "dc10", "R01": "dc06", "R02": "dc08", "R03": "dc09", "R04": "dc10",
+          "R10": "dc04", "R11": "dc06", "R12": "dc03", "R13": "dc05", "R14": "dc07",
+          "R20": "dc04", "R21": "dc07", "R22": "dc03", "R23": "dc09", "R24": "dc07",
+          "R30": "dc08", "R31": "dc05", "R32": "dc04", "R33": "dc09", "R34": "dc03",
+          "R40": "dc10", "R41": "dc08", "R42": "dc05", "R43": "dc06", "R44": "dc10"
+        },
+        "swapNode": "dc02",
+        "default": "vs01"
+      }
+    },
+    "maincamera": {
+      "label": "TS8",
+      "telCode": "TS",
+      "active": true,
+      "iiif": "https://lsst-camera.slac.stanford.edu/iiif/2/",
+      "defaultRaft": "R22",
+      "sources": ["raw", "RubinTV"],
+      "fields": { "run": true, "source": false },
+      "grid": {
+        "columns": [
+          { "name": "dayobs",  "visible": false, "groupIndex": null },
+          { "name": "run",     "visible": true,  "groupIndex": 1 },
+          { "name": "runMode", "visible": true,  "groupIndex": 0 }
+        ]
+      }
+    }
+  }
+}
