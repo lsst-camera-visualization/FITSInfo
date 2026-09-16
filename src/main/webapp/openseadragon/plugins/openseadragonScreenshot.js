@@ -214,8 +214,12 @@
 
  		// Add button
         var prefix = this.prefixUrl || this.viewer.prefixUrl || '';
-        var useGroup = this.viewer.buttons && this.viewer.buttons.buttons;
-        var anyButton = useGroup ? this.viewer.buttons.buttons[0] : null;
+        // OSD 3.0.0 renamed Viewer.buttons -> Viewer.buttonGroup; the old name still
+        // works but logs a deprecation warning. Prefer buttonGroup, fall back for
+        // older OSD. (LSST-local patch for the 6.x upgrade.)
+        var buttonGroup = this.viewer.buttonGroup || this.viewer.buttons;
+        var useGroup = buttonGroup && buttonGroup.buttons;
+        var anyButton = useGroup ? buttonGroup.buttons[0] : null;
         var onFocusHandler = anyButton ? anyButton.onFocus : null;
         var onBlurHandler = anyButton ? anyButton.onBlur : null;
         if (this.showScreenshotControl) {
@@ -233,8 +237,8 @@
                 onBlur:     onBlurHandler
             });
             if (useGroup) {
-                this.viewer.buttons.buttons.push(this.toggleButton);
-                this.viewer.buttons.element.appendChild(this.toggleButton.element);
+                buttonGroup.buttons.push(this.toggleButton);
+                buttonGroup.element.appendChild(this.toggleButton.element);
             }
             if (this.toggleButton.imgDown) {
                 this.buttonActiveImg = this.toggleButton.imgDown.cloneNode(true);
